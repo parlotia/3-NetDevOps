@@ -1,0 +1,15 @@
+version: '3.9'
+services:
+  fastapi:
+    build:
+      context: fastapi
+    privileged: true
+    ports:
+      - "443:443"
+    restart: always
+    networks:
+      - fastapi
+
+networks:
+  fastapi:
+    driver: bridge
