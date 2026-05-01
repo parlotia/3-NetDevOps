@@ -1,0 +1,1125 @@
+1. https://qytsystem.qytang.com/python_enhance/python_enhance_homework
+2.账号：pye_zhufs 密码：2Sx-66coR
+3.
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+   
+    <link rel="shortcut icon" href="https://qytsystem.qytang.com/static/files/images/favicon.ico">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    
+
+
+    <!-- Bootstrap CSS -->
+
+    <link rel="stylesheet" href="https://qytsystem.qytang.com/static/files/css/bootstrap.min.css">
+
+    <title>
+    乾頤堂Python强化班系统
+</title>
+    
+    <link rel="stylesheet" href="https://qytsystem.qytang.com/static/files/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://qytsystem.qytang.com/static/files/css/sidebar_simple.css">
+    <link rel="stylesheet" href="https://qytsystem.qytang.com/static/files/css/font-awesome.min.css">
+
+  </head>
+  
+  <body>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+
+    <script src="https://qytsystem.qytang.com/static/files/js/jquery-3.3.1.slim.min.js"></script>
+
+
+    <script src="https://qytsystem.qytang.com/static/files/js/popper.min.js"></script>
+
+
+    <script src="https://qytsystem.qytang.com/static/files/js/bootstrap.min.js"></script>
+
+    <!-- ajax 必须加载下面的JS -->
+
+    <script src="https://qytsystem.qytang.com/static/files/js/jquery-3.1.1.min.js"></script>
+    
+    
+    <script src="https://qytsystem.qytang.com/static/files/js/jquery.dataTables.min.js"></script>
+
+
+
+    
+        
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+               
+                <a href="/" class="float-left"><img src="https://qytsystem.qytang.com/static/files/images/logo_long_new.png" height="50" width=auto></a>
+
+              <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+              </button>
+
+              <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav mr-auto">
+                  
+                      
+                        <li class="nav-item">
+                            <a class="nav-link" href=/python_enhance/python_enhance_home>主页</a>
+                        </li>
+                      
+                  
+                      
+                        <li class="nav-item">
+                            <a class="nav-link" href=/python_enhance/python_enhance_semester>本期课程介绍</a>
+                        </li>
+                      
+                  
+                      
+                        <li class="nav-item">
+                            <a class="nav-link" href=/python_enhance/python_enhance_week_top>Python周排行榜(TOP20)</a>
+                        </li>
+                      
+                  
+                      
+                        <li class="nav-item">
+                            <a class="nav-link" href=/python_enhance/python_enhance_calendar>课程日历</a>
+                        </li>
+                      
+                  
+                      
+                        <li class="nav-item active">
+                            <a class="nav-link" href=/python_enhance/python_enhance_homework>作业信息</a>
+                        </li>
+                      
+                  
+                      
+                        <li class="nav-item">
+                            <a class="nav-link" href=/python_enhance/python_enhance_preparation>视频与资料</a>
+                        </li>
+                      
+                  
+                      
+                        <li class="nav-item">
+                            <a class="nav-link" href=/python_enhance/python_enhance_self_data>个人数据</a>
+                        </li>
+                      
+                  
+                      
+                        <li class="nav-item">
+                            <a class="nav-link" href=/python_enhance/python_enhance_wall_of_fame>荣誉墙</a>
+                        </li>
+                      
+                  
+                      
+                        <li class="nav-item">
+                            <a class="nav-link" href=/python_enhance/python_continue_to_service>继续服务</a>
+                        </li>
+                      
+                  
+                      
+                        <li class="nav-item">
+                            <a class="nav-link" href=/python_enhance/python_enhance_score_rules>积分规则</a>
+                        </li>
+                      
+                  
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                      
+                      
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Python强化朱峰烁</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/accounts/logout">登出</a>
+                        </li>
+                      
+                </ul>
+              </div>
+            </nav>
+        
+        
+<div class="row" id="body-row">
+    <div class="col-sm-3 col-md-2 sidebar">
+          <ul class="sidebar-nav">
+              
+                  
+                  
+                    <li class="active">
+                        <a href="/python_enhance/python_enhance_homework">我的作业</a>
+                    </li>
+                  
+              
+                  
+                  
+                      <li><a href="/python_enhance/python_enhance_standard">作业标准</a></li>
+                  
+              
+                  
+                  
+                      <li><a href="/python_enhance/python_enhance_homework_a">A作业参考</a></li>
+                  
+              
+          </ul>
+    </div>
+    <div class="col-sm-8 col-md-9 main">
+        <br><h2 style="color: #666666">作业信息</h2>
+            <div class="alert alert-primary" role="alert" style="color: yellowgreen">
+                <i class="icon-bell-alt"></i><strong>   教主作业批改非常主观！可能就是因为没有看惯你的排版！没有给你一个A！请见谅！</strong>
+            </div>
+            <div class="alert alert-danger" role="alert">
+                <i class="icon-star" style="color: red"></i><strong>   上交作业前！请先了解<a href="/python_enhance/python_enhance_standard">作业标准</a></strong>
+            </div>
+            <div class="alert alert-warning" role="alert" style="color: #1CD4C8">
+                <i class="icon-desktop" style="color: #0044cc"></i><strong>   在作业未批改之前！你是可以删除作业再重传的！一旦批改！命运就已注定！</strong>
+            </div>
+            <div class="alert alert-primary" role="alert" style="color: yellowgreen">
+                <i class="icon-ok"></i><strong style="color: #0c5460">   如果你没有思路可以参考一下<a href="/python_enhance/python_enhance_homework_a">"A作业参考"</a>, 那里有本轮学员的A作业,还有教主的视频讲解(A作业是随机选的,可能和视频讲解的解法不同!)</strong>
+            </div>
+    <table class="table table-bordered" id="table-for-student">
+                <thead class="thead-dark">
+                    <tr>
+                      <th class="text-center">编号</th>
+                      <th class="text-center">课程</th>
+                      <th class="text-center">第几天</th>
+                      <th class="text-center">作业日期</th>
+                      <th class="text-center">上传时间</th>
+                      <th class="text-center">批阅状态</th>
+                      <th class="text-center">批阅时间</th>
+                      <th class="text-center">成绩</th>
+                      <th class="text-center">随机分</th>
+                      <th class="text-center">操作</th>
+                    </tr>
+                </thead>
+                <tbody class="text-center">
+
+                
+                            <tr>
+                                <td>1</td>
+                                <td>Python基础</td>
+                                <td>1</td>
+                                <td>2026-03-21</td>
+                                <td>2026-03-21 17:38</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17469 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-03-21 20:39</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.1</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>2</td>
+                                <td>Python基础</td>
+                                <td>2</td>
+                                <td>2026-03-23</td>
+                                <td>2026-03-23 15:28</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17503 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-03-27 21:58</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.2</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>3</td>
+                                <td>Python基础</td>
+                                <td>3</td>
+                                <td>2026-03-24</td>
+                                <td>2026-03-24 10:00</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17529 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-03-24 21:43</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.0</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>4</td>
+                                <td>Python基础</td>
+                                <td>4</td>
+                                <td>2026-03-25</td>
+                                <td>2026-03-25 12:51</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17569 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-03-25 21:35</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.0</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>5</td>
+                                <td>Python基础</td>
+                                <td>5</td>
+                                <td>2026-03-26</td>
+                                <td>2026-03-26 14:48</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17607 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-03-26 21:30</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.2</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>6</td>
+                                <td>Python基础</td>
+                                <td>6</td>
+                                <td>2026-03-27</td>
+                                <td>2026-03-27 10:45</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17632 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-03-27 22:01</td>
+
+                                
+                                    <td style="background-color: #78ca66;font-size: 16px">A-</td>
+                                
+                                
+                                <td>0.0</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>7</td>
+                                <td>Python基础</td>
+                                <td>7</td>
+                                <td>2026-03-30</td>
+                                <td>2026-03-30 09:18</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17679 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-03-30 21:35</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.0</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>8</td>
+                                <td>Python基础</td>
+                                <td>8</td>
+                                <td>2026-03-31</td>
+                                <td>2026-03-31 14:02</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17708 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-03-31 23:30</td>
+
+                                
+                                    <td style="background-color: #78ca66;font-size: 16px">A-</td>
+                                
+                                
+                                <td>0.2</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>9</td>
+                                <td>Python基础</td>
+                                <td>9</td>
+                                <td>2026-04-01</td>
+                                <td>2026-04-01 16:32</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17741 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-01 22:14</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.0</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>10</td>
+                                <td>Python基础</td>
+                                <td>10</td>
+                                <td>2026-04-02</td>
+                                <td>2026-04-02 18:52</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17778 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-03 21:51</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.2</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>11</td>
+                                <td>Python基础</td>
+                                <td>11</td>
+                                <td>2026-04-03</td>
+                                <td>2026-04-03 13:21</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17800 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-03 21:51</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.2</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>12</td>
+                                <td>Python基础</td>
+                                <td>12</td>
+                                <td>2026-04-06</td>
+                                <td>2026-04-06 09:15</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17857 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-06 22:20</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.0</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>13</td>
+                                <td>Python基础</td>
+                                <td>13</td>
+                                <td>2026-04-07</td>
+                                <td>2026-04-07 09:01</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17879 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-07 22:44</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.0</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>14</td>
+                                <td>Python基础</td>
+                                <td>14</td>
+                                <td>2026-04-08</td>
+                                <td>2026-04-08 10:48</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17909 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-08 22:57</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.1</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>15</td>
+                                <td>Python基础</td>
+                                <td>15</td>
+                                <td>2026-04-09</td>
+                                <td>2026-04-09 08:47</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17945 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-09 22:30</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.1</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>16</td>
+                                <td>Python基础</td>
+                                <td>16</td>
+                                <td>2026-04-10</td>
+                                <td>2026-04-10 09:30</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/17971 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-10 22:30</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.1</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>17</td>
+                                <td>经典自动化协议</td>
+                                <td>1</td>
+                                <td>2026-04-13</td>
+                                <td>2026-04-13 17:07</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/18024 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-13 22:30</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.0</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>18</td>
+                                <td>经典自动化协议</td>
+                                <td>2</td>
+                                <td>2026-04-14</td>
+                                <td>2026-04-14 10:51</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/18046 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-14 22:30</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.2</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>19</td>
+                                <td>经典自动化协议</td>
+                                <td>3</td>
+                                <td>2026-04-15</td>
+                                <td>2026-04-15 10:19</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/18068 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-15 22:30</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.2</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>20</td>
+                                <td>经典自动化协议</td>
+                                <td>4</td>
+                                <td>2026-04-16</td>
+                                <td>2026-04-17 11:11</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/18107 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-17 21:19</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.2</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>21</td>
+                                <td>经典自动化协议</td>
+                                <td>5</td>
+                                <td>2026-04-17</td>
+                                <td>2026-04-18 15:20</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/18126 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-18 22:36</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.1</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>22</td>
+                                <td>经典自动化协议</td>
+                                <td>6</td>
+                                <td>2026-04-20</td>
+                                <td>2026-04-20 16:26</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/18164 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-20 22:30</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.1</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>23</td>
+                                <td>经典自动化协议</td>
+                                <td>7</td>
+                                <td>2026-04-21</td>
+                                <td>2026-04-21 14:28</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/18182 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-21 22:22</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.0</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>24</td>
+                                <td>经典自动化协议</td>
+                                <td>8</td>
+                                <td>2026-04-22</td>
+                                <td>2026-04-22 22:36</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/18215 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-22 22:36</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.0</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>25</td>
+                                <td>经典自动化协议</td>
+                                <td>9</td>
+                                <td>2026-04-23</td>
+                                <td>2026-04-23 15:27</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/18224 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-23 22:30</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.1</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>26</td>
+                                <td>经典自动化协议</td>
+                                <td>10</td>
+                                <td>2026-04-24</td>
+                                <td>2026-04-24 17:15</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/18243 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-24 22:30</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.2</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>27</td>
+                                <td>NetDevOps</td>
+                                <td>1</td>
+                                <td>2026-04-27</td>
+                                <td>2026-04-27 15:41</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/18284 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-27 22:30</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.0</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>28</td>
+                                <td>NetDevOps</td>
+                                <td>2</td>
+                                <td>2026-04-28</td>
+                                <td>2026-04-28 10:00</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/18301 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-28 22:30</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.1</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>29</td>
+                                <td>NetDevOps</td>
+                                <td>3</td>
+                                <td>2026-04-29</td>
+                                <td>2026-04-30 00:40</td>
+                                
+                                
+                                    
+                                    <td><a href=/python_enhance/python_enhance_homework_download/18330 data-toggle="tooltip" data-placement="top" title="下载此作业"><i class="icon-cloud-download"></i></a></td>
+                                
+                                
+                                <td>2026-04-30 18:57</td>
+
+                                
+                                    <td style="background-color: greenyellow;font-size: 16px">A</td>
+                                
+                                
+                                <td>0.0</td>
+                                <td>
+                                    
+                                    
+                                        <a href="#" data-toggle="tooltip" data-placement="top" title="作业已经被老师检查不能被删除">
+                                        <i class="icon-ok-circle"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td>30</td>
+                                <td>NetDevOps</td>
+                                <td>4</td>
+                                <td>2026-04-30</td>
+                                <td>2026-05-01 15:08</td>
+                                
+                                
+                                    <td>待批阅</td>
+                                
+                                
+                                <td>不可用</td>
+
+                                
+                                    <td>未知</td>
+                                
+                                
+                                <td>0.0</td>
+                                <td>
+                                    
+                                        
+                                        <a href=/python_enhance/python_enhance_homework_delete/18355 onclick="return confirmAct();" data-toggle="tooltip" data-placement="top" title="删除此作业">
+                                        
+                                        <i class="icon-trash"></i>
+                                        </a>
+                                    
+                                </td>
+                            </tr>
+                
+                </tbody>
+            </table>
+    </div>
+</div>
+<script>
+    $(document).ready( function () {
+        $('#table-for-student').DataTable({
+            'iDisplayLength': 100 // 默认显示行数
+            });
+    } );
+</script>
+
+<script>
+    $(document).ready(function() {
+        var table = $('#table-for-student').DataTable();
+
+        $('#table-for-student tbody').on( 'click', 'tr', function () {
+            if ( $(this).hasClass('selected') ) {
+                $(this).removeClass('selected');
+            }
+            else {
+                table.$('tr.selected').removeClass('selected');
+                $(this).addClass('selected');
+            }
+        } );
+
+        $('#button').click( function () {
+            table.row('.selected').remove().draw( false );
+        } );
+    } );
+</script>
+
+
+<script type="text/javascript" language="javascript">
+    <!--
+    function confirmAct()
+    {
+        if(confirm('确定要执行此删除操作吗?'))
+        {
+            return true;
+        }
+        return false;
+    }
+    //-->
+</script>
+
+    
+  </body>
+      <!-- Footer -->
+<footer class="footer font-small">
+
+  <!-- Copyright -->
+  <div class="footer-copyright text-center py-3">© 2024 Copyright: 现任明教教主乾颐堂</a>
+  </div>
+  <!-- Copyright -->
+
+</footer>
+<!-- Footer -->
+
+</html>
