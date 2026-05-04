@@ -1,0 +1,60 @@
+# Cisco YangSuite docker-compose
+# 使用方法: 先 clone https://github.com/CiscoDevNet/yangsuite
+# 然后进入 docker/ 目录执行 docker-compose up
+# 本文件复制自官方仓库并适配本机环境
+
+version: '3'
+services:
+    yangsuite:
+      image: yangsuite:latest
+      build:
+        context: /netdevops/yangsuite/docker/yangsuite
+        dockerfile: ./Dockerfile
+      environment:
+        - DJANGO_ALLOWED_HOSTS=*
+        - YS_ADMIN_USER=admin
+        - YS_ADMIN_PASS=Cisc0123
+      command: /yangsuite/migrate_and_start.sh
+      ports:
+        - "50052:50052"
+        - "50051:50051"
+        - "9339:9339"
+        - "57344:57344"
+        - "57345:57345"
+        - "443:443"
+      volumes:
+        - static-content:/ys-static
+        - uwsgi:/yangsuite/uwsgi
+        - /netdevops/yangsuite/docker/ys-data:/ys-data
+    nginx:
+      image: nginx:latest
+      build:
+        context: /netdevops/yangsuite/docker/nginx
+        dockerfile: ./Dockerfile
+      depends_on:
+        - yangsuite
+      ports:
+        - "80:80"
+        - "8443:8443"
+      volumes:
+        - static-content:/etc/nginx/html
+        - uwsgi:/var/run/uwsgi
+    backup:
+      image: backup:latest
+      build:
+        context: /netdevops/yangsuite/docker/backup
+        dockerfile: ./Dockerfile
+      command: ['/code/run_cron.sh']
+      depends_on:
+        - yangsuite
+      environment:
+        - DATA_DIR=/ysdata
+        - CRON_EXP=${YS_BACKUP_CRON:-*/30 * * * *}
+        - NO_BACKUP=${YS_NO_BACKUP:-true}
+        - MAX_BACKUP=${YS_MAX_BACKUP:-2}
+      volumes:
+        - /netdevops/yangsuite/docker/ys-data:/ysdata
+        - /netdevops/yangsuite/docker/ys-backup:/backup
+volumes:
+    static-content:
+    uwsgi:
