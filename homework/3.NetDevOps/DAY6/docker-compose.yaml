@@ -8,7 +8,7 @@ services:
     yangsuite:
       image: yangsuite:latest
       build:
-        context: /netdevops/yangsuite/docker/yangsuite
+        context: /opt/yangsuite/docker/yangsuite
         dockerfile: ./Dockerfile
       environment:
         - DJANGO_ALLOWED_HOSTS=*
@@ -25,11 +25,11 @@ services:
       volumes:
         - static-content:/ys-static
         - uwsgi:/yangsuite/uwsgi
-        - /netdevops/yangsuite/docker/ys-data:/ys-data
+        - /opt/yangsuite/docker/ys-data:/ys-data
     nginx:
       image: nginx:latest
       build:
-        context: /netdevops/yangsuite/docker/nginx
+        context: /opt/yangsuite/docker/nginx
         dockerfile: ./Dockerfile
       depends_on:
         - yangsuite
@@ -42,7 +42,7 @@ services:
     backup:
       image: backup:latest
       build:
-        context: /netdevops/yangsuite/docker/backup
+        context: /opt/yangsuite/docker/backup
         dockerfile: ./Dockerfile
       command: ['/code/run_cron.sh']
       depends_on:
@@ -53,8 +53,8 @@ services:
         - NO_BACKUP=${YS_NO_BACKUP:-true}
         - MAX_BACKUP=${YS_MAX_BACKUP:-2}
       volumes:
-        - /netdevops/yangsuite/docker/ys-data:/ysdata
-        - /netdevops/yangsuite/docker/ys-backup:/backup
+        - /opt/yangsuite/docker/ys-data:/ysdata
+        - /opt/yangsuite/docker/ys-backup:/backup
 volumes:
     static-content:
     uwsgi:
