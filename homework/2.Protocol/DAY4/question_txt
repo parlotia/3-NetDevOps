@@ -1,0 +1,201 @@
+'''
+任务一: 使用 Bokeh 绘制设备性能柱状图
+使用下方提供的 bokeh_bar 工具函数, 用随机数据模拟一台设备的 CPU 利用率随时间变化, 绘制时间序列柱状图。
+
+bokeh_bar 函数 (放入 tools/day4_bokeh_bar.py, 直接使用):
+
+from bokeh.plotting import figure, output_file, save
+from bokeh.models import HoverTool, DatetimeTickFormatter, ColumnDataSource
+import os
+from pathlib import Path
+
+OUTPUTS_DIR = Path(__file__).resolve().parent.parent / 'outputs'
+
+
+def bokeh_bar(time_list, value_list, line_name,
+              title='利用率柱状图', y_label='利用率 (%)', save_name=None):
+    """使用 Bokeh 绘制时间序列柱状图 (单设备单指标随时间变化)。"""
+    # 根据相邻时间间隔, 自动计算柱宽 (取间隔的 60%, 单位毫秒)
+    if len(time_list) > 1:
+        delta_ms = (time_list[1] - time_list[0]).total_seconds() * 1000 * 0.6
+    else:
+        delta_ms = 30000
+
+    source = ColumnDataSource(data={
+        'time': time_list,
+        'time_str': [t.strftime("%Y-%m-%d %H:%M:%S") for t in time_list],
+        'value': value_list
+    })
+
+    p = figure(height=400, width=700, title=f"{title} - {line_name}",
+               x_axis_type="datetime", x_axis_label='时间', y_axis_label=y_label,
+               y_range=(0, 100))
+
+    p.vbar(x='time', top='value', source=source, width=delta_ms,
+           color="#e84d60", alpha=0.8, legend_label=line_name)
+
+    hover = HoverTool(tooltips=[("时间", "@time_str"), ("值", "@value%")])
+    p.add_tools(hover)
+
+    p.xaxis.formatter = DatetimeTickFormatter(
+        minutes="%H:%M", hours="%H:%M", days="%m-%d")
+    p.legend.location = "top_right"
+
+    os.makedirs(OUTPUTS_DIR, exist_ok=True)
+    output_filename = save_name if save_name else str(OUTPUTS_DIR / f"{title}.html")
+    output_file(output_filename, title=title)
+    save(p)
+    print(f"[*] Bokeh 柱状图已生成: {output_filename}")
+测试方式: 直接运行 python3 tools/day4_bokeh_bar.py, 图表输出到 outputs/ 目录
+
+柱状图效果 (交互式 HTML, 支持悬停提示):
+
+
+
+任务二: 使用 Bokeh 绘制利用率趋势折线图
+使用下方提供的 bokeh_line 工具函数, 用随机数据模拟两台设备的 CPU 利用率趋势, 绘制时间序列折线图。
+
+bokeh_line 函数 (放入 tools/day4_bokeh_line.py, 直接使用):
+
+from bokeh.plotting import figure, output_file, save
+from bokeh.models import HoverTool, DatetimeTickFormatter, ColumnDataSource
+import os
+from pathlib import Path
+
+OUTPUTS_DIR = Path(__file__).resolve().parent.parent / 'outputs'
+
+LINE_COLORS = ['red', 'blue', 'green', 'orange', 'purple', 'brown']
+
+
+def bokeh_line(lines_data, title='利用率趋势', y_label='利用率 (%)', save_name=None):
+    """
+    使用 Bokeh 绘制多条折线的时间序列图。
+
+    :param lines_data: 多条线的数据列表, 格式:
+        [[time_list, value_list, line_name], [time_list, value_list, line_name], ...]
+    :param title:   图表标题
+    :param y_label: Y轴标签
+    :param save_name: 输出文件路径, None 则自动保存到 outputs/{title}.html
+    """
+    p = figure(height=400, width=700, title=title,
+               x_axis_type="datetime", x_axis_label='时间', y_axis_label=y_label,
+               y_range=(0, 100))
+
+    for i, (time_list, value_list, line_name) in enumerate(lines_data):
+        color = LINE_COLORS[i % len(LINE_COLORS)]
+        source = ColumnDataSource(data={
+            'time': time_list,
+            'time_str': [t.strftime("%Y-%m-%d %H:%M:%S") for t in time_list],
+            'value': value_list
+        })
+        p.line(x='time', y='value', source=source, line_width=2,
+               color=color, legend_label=line_name)
+        p.scatter(x='time', y='value', source=source, size=5,
+                  color=color, alpha=0.5)
+
+    hover = HoverTool(tooltips=[("时间", "@time_str"), ("值", "@value%")], mode='vline')
+    p.add_tools(hover)
+
+    p.xaxis.formatter = DatetimeTickFormatter(
+        minutes="%H:%M",
+        hours="%H:%M",
+        days="%m-%d"
+    )
+    p.legend.location = "top_left"
+    p.legend.click_policy = "hide"
+
+    os.makedirs(OUTPUTS_DIR, exist_ok=True)
+    output_filename = save_name if save_name else str(OUTPUTS_DIR / f"{title}.html")
+    output_file(output_filename, title=title)
+    save(p)
+    print(f"[*] Bokeh 折线图已生成: {output_filename}")
+测试方式: 直接运行 python3 tools/day4_bokeh_line.py, 图表输出到 outputs/ 目录
+
+折线图效果 (交互式 HTML, 支持悬停/隐藏线条):
+
+
+
+任务三: 创建 SQLite 数据库表 (记录路由器 CPU 和内存)
+使用 SQLAlchemy 创建一个 router_monitor 表, 包含以下字段:
+
+id - 主键, 自增
+device_ip - 设备 IP 地址 (字符串)
+cpu_useage_percent - CPU 利用率百分比 (整数)
+mem_use - 已用内存字节数 (整数)
+mem_free - 空闲内存字节数 (整数)
+record_datetime - 记录时间 (自动取当前时间)
+期望输出 (创建成功后在目录下生成 .db 文件):
+
+$ python3 day4_1_create_db.py
+$ ls *.db
+sqlalchemy_syslog_sqlite3.db
+
+任务四: SNMP 采集 CPU/内存, 写入数据库 + Linux Crond 调度
+完成以下步骤:
+
+SNMP 采集函数 (tools/day4_get.py): 使用课程提供的 snmpv2_get 异步函数, 通过 SNMP 读取思科设备的 CPU 和内存 OID
+编写写库脚本 (day4_2_write_db.py): 遍历设备列表, 调用 SNMP 采集, 构建 RouterMonitor 对象写入 SQLite
+配置 Linux Crond: 每分钟执行一次写库脚本, 持续采集数据
+关键 OID (思科设备):
+
+CPU 5秒平均利用率: 1.3.6.1.4.1.9.9.109.1.1.1.1.6.7
+已用内存 (字节):   1.3.6.1.4.1.9.9.109.1.1.1.1.12.7
+空闲内存 (字节):   1.3.6.1.4.1.9.9.109.1.1.1.1.13.7
+SNMP 采集函数调用方式 (day4_get.py 已提供):
+
+import asyncio
+from tools.day4_get import snmpv2_get
+
+# 返回 (OID字符串, 值字符串)
+_, cpu_str = asyncio.run(snmpv2_get('设备IP', 'community', 'OID'))
+写库脚本期望输出:
+
+$ python3 day4_2_write_db.py
+[+] 设备IP1: CPU=6%, MEM_Used=2934692, MEM_Free=1025348
+[+] 设备IP2: CPU=7%, MEM_Used=2858708, MEM_Free=1101588
+[*] 共写入 2 条记录
+Crond 配置 (vim /etc/crontab):
+
+# 每分钟执行一次 SNMP 采集写库
+* * * * * root python3 /你的项目路径/day4/code/day4_2_write_db.py
+配置完成后重启服务: systemctl restart crond
+
+注意: 为了 Linux Crond 能正确导入模块, 脚本开头需要把项目主目录加入 Python 搜索路径:
+
+import sys
+sys.path.insert(0, '/你的项目主目录路径/')
+
+任务五: 从数据库读取数据, 绘制 CPU/内存利用率趋势图
+Crond 调度运行一段时间后 (建议至少 5~10 分钟), 编写脚本:
+
+从 SQLite 读取最近 1 小时的监控数据
+按设备 IP 分组, 计算内存利用率: mem_use / (mem_use + mem_free) × 100
+调用 bokeh_line 分别绘制 CPU 利用率趋势和内存利用率趋势两张折线图
+期望输出:
+
+$ python3 day4_3_show_db.py
+[*] 设备IP1: 读取 10 条记录
+[*] 设备IP2: 读取 10 条记录
+[*] Bokeh 折线图已生成: .../outputs/CPU利用率趋势.html
+[*] Bokeh 折线图已生成: .../outputs/内存利用率趋势.html
+折线图效果 (两台设备 CPU 利用率对比):
+
+
+折线图效果 (两台设备内存利用率对比):
+
+
+
+代码目录结构:
+
+day4/code/
+├── tools/
+│   ├── day4_get.py             # SNMP 采集函数 (已提供)
+│   ├── day4_bokeh_bar.py       # Bokeh 柱状图函数 (已提供, 任务一: 直接运行测试)
+│   └── day4_bokeh_line.py      # Bokeh 折线图函数 (已提供, 任务二: 直接运行测试)
+├── day4_1_create_db.py         # 任务三: 创建 SQLite 数据库表
+├── day4_2_write_db.py          # 任务四: SNMP 采集写入数据库 (crond 调度)
+├── day4_3_show_db.py           # 任务五: 读取数据库, 绘制 Bokeh 折线图
+├── day4_4_crond.md             # Crond 调度配置说明文档
+└── outputs/                    # 生成的交互式 HTML 图表
+'''
+
