@@ -1,0 +1,259 @@
+{
+  "info": {
+    "_postman_id": "netdevops-day7-restconf",
+    "name": "NetDevOps DAY7 RESTCONF",
+    "description": "DAY7 RESTCONF 接口集合 - CPU利用率采集与SYSLOG配置",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "device_ip",
+      "value": "10.10.1.200"
+    },
+    {
+      "key": "username",
+      "value": "admin"
+    },
+    {
+      "key": "password",
+      "value": "Cisc0123"
+    },
+    {
+      "key": "severity",
+      "value": "7"
+    },
+    {
+      "key": "syslog_server_ip",
+      "value": "10.10.1.205"
+    }
+  ],
+  "item": [
+    {
+      "name": "获取五秒内CPU利用率",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/yang-data+json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "https://{{device_ip}}/restconf/data/Cisco-IOS-XE-process-cpu-oper:cpu-usage/cpu-utilization/five-seconds",
+          "protocol": "https",
+          "host": [
+            "{{device_ip}}"
+          ],
+          "path": [
+            "restconf",
+            "data",
+            "Cisco-IOS-XE-process-cpu-oper:cpu-usage",
+            "cpu-utilization",
+            "five-seconds"
+          ]
+        },
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "{{username}}",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "{{password}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "获取一分钟CPU利用率",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/yang-data+json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "https://{{device_ip}}/restconf/data/Cisco-IOS-XE-process-cpu-oper:cpu-usage/cpu-utilization/one-minute",
+          "protocol": "https",
+          "host": [
+            "{{device_ip}}"
+          ],
+          "path": [
+            "restconf",
+            "data",
+            "Cisco-IOS-XE-process-cpu-oper:cpu-usage",
+            "cpu-utilization",
+            "one-minute"
+          ]
+        },
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "{{username}}",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "{{password}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "获取五分钟CPU利用率",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/yang-data+json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "https://{{device_ip}}/restconf/data/Cisco-IOS-XE-process-cpu-oper:cpu-usage/cpu-utilization/five-minute",
+          "protocol": "https",
+          "host": [
+            "{{device_ip}}"
+          ],
+          "path": [
+            "restconf",
+            "data",
+            "Cisco-IOS-XE-process-cpu-oper:cpu-usage",
+            "cpu-utilization",
+            "five-minute"
+          ]
+        },
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "{{username}}",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "{{password}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "配置SYSLOG",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/yang-data+json",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/yang-data+json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"Cisco-IOS-XE-native:logging\": {\n    \"trap\": {\n      \"severity\": {{severity}}\n    },\n    \"hostip\": \"{{syslog_server_ip}}\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://{{device_ip}}/restconf/data/Cisco-IOS-XE-native:native/logging",
+          "protocol": "https",
+          "host": [
+            "{{device_ip}}"
+          ],
+          "path": [
+            "restconf",
+            "data",
+            "Cisco-IOS-XE-native:native",
+            "logging"
+          ]
+        },
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "{{username}}",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "{{password}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "获取日志配置",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/yang-data+json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "https://{{device_ip}}/restconf/data/Cisco-IOS-XE-native:native/logging",
+          "protocol": "https",
+          "host": [
+            "{{device_ip}}"
+          ],
+          "path": [
+            "restconf",
+            "data",
+            "Cisco-IOS-XE-native:native",
+            "logging"
+          ]
+        },
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "{{username}}",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "{{password}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
