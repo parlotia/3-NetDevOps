@@ -1,0 +1,30 @@
+hostname: C8Kv1
+
+interface_list:
+  - interface_name: GigabitEthernet1
+    interface_ip: 10.10.1.201
+    interface_mask: 255.255.255.0
+  - interface_name: GigabitEthernet2
+    interface_ip: 137.78.5.254
+    interface_mask: 255.255.255.0
+  - interface_name: GigabitEthernet3
+    interface_ip: 61.128.1.254
+    interface_mask: 255.255.255.0
+  - interface_name: Loopback0
+    interface_ip: 1.1.1.1
+    interface_mask: 255.255.255.0
+
+ospf_process_id: 1
+
+router_id: 1.1.1.1
+
+ospf_network_list:
+  - network: 137.78.5.0
+    wildmask: 0.0.0.255
+    area: 0
+  - network: 61.128.1.0
+    wildmask: 0.0.0.255
+    area: 0
+  - network: 1.1.1.0
+    wildmask: 0.0.0.255
+    area: 0

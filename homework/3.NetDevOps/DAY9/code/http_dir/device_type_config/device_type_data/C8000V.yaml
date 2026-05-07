@@ -1,0 +1,13 @@
+username: admin
+password: Cisc0123
+search_dns: netdevops.com
+dns_server: 10.10.1.205
+ntp_server: ntp.aliyun.com
+grpc_server: 10.10.1.205
+grpc_port: 57000
+grpc_start_id: 668
+grpc_list:
+  - id: 666
+    xpath: "/process-cpu-ios-xe-oper:cpu-usage/cpu-utilization/five-seconds"
+  - id: 667
+    xpath: "/memory-ios-xe-oper:memory-statistics/memory-statistic"

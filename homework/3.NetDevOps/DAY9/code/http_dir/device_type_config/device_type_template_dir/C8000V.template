@@ -1,0 +1,32 @@
+username {{ username }} privilege 15 secret {{ password }}
+
+ip domain name {{ search_dns }}
+
+ip name-server {{ dns_server }}
+
+clock timezone GMT +8
+ntp server {{ ntp_server }}
+
+line vty 0 15
+ login local
+ transport input ssh
+
+netconf-yang
+
+{% for grpc in grpc_list %}
+telemetry ietf subscription {{ grpc.id }}
+ encoding encode-kvgpb
+ filter xpath {{ grpc.xpath }}
+ stream yang-push
+ update-policy periodic 1000
+ receiver ip address {{ grpc_server }} {{ grpc_port }} protocol grpc-tcp
+{% endfor %}
+
+{% for grpc_if in grpc_if_list %}
+telemetry ietf subscription {{ grpc_if.id }}
+ encoding encode-kvgpb
+ filter xpath /interfaces-ios-xe-oper:interfaces/interface[name='{{ grpc_if.name }}']/statistics
+ stream yang-push
+ update-policy periodic 1000
+ receiver ip address {{ grpc_server }} {{ grpc_port }} protocol grpc-tcp
+{% endfor %}

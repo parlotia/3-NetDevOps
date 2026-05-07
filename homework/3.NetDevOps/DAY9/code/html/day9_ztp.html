@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>QYTang ZTP 服务器</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; }
+        pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>QYTang ZTP 服务器</h1>
+        <p>欢迎使用零接触部署（ZTP）服务器。</p>
+        <h2>使用说明</h2>
+        <p>设备可以通过以下URL获取配置：</p>
+        <pre><code>/ztp/&lt;device_type&gt;/&lt;device_sn&gt;/&lt;interfaces&gt;</code></pre>
+        <p>例如：</p>
+        <pre><code>http://&lt;server&gt;/ztp/C8000V/96WA1AWBIHB/GigabitEthernet1,GigabitEthernet2,GigabitEthernet3</code></pre>
+        <h2>配置数据分离架构</h2>
+        <ul>
+            <li><strong>设备类型通用配置</strong>：相同类型设备的通用配置（C8000V.template + C8000V.yaml）</li>
+            <li><strong>设备特殊配置</strong>：每个设备独有的配置（序列号.yaml + 接口/OSP模板）</li>
+        </ul>
+    </div>
+</body>
+</html>
