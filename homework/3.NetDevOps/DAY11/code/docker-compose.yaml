@@ -1,0 +1,73 @@
+services:
+  netbox:
+    image: netboxcommunity/netbox:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - env/netbox.env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./extra.py:/etc/netbox/config/extra.py:ro
+      - netbox-media-files:/opt/netbox/netbox/media
+      - netbox-reports-files:/opt/netbox/netbox/reports
+      - netbox-scripts-files:/opt/netbox/netbox/scripts
+    healthcheck:
+      test: ["CMD", "python", "/opt/netbox/netbox/manage.py", "check", "--deploy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  netbox-worker:
+    image: netboxcommunity/netbox:latest
+    depends_on:
+      - netbox
+    env_file:
+      - env/netbox.env
+    command:
+      - /opt/netbox/venv/bin/python
+      - /opt/netbox/netbox/manage.py
+      - rqworker
+    volumes:
+      - ./extra.py:/etc/netbox/config/extra.py:ro
+      - netbox-media-files:/opt/netbox/netbox/media
+      - netbox-reports-files:/opt/netbox/netbox/reports
+      - netbox-scripts-files:/opt/netbox/netbox/scripts
+
+  postgres:
+    image: postgres:15-alpine
+    env_file:
+      - env/postgres.env
+    volumes:
+      - netbox-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U netbox -d netbox"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --requirepass
+      - redis_password
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis_password", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  netbox-media-files:
+    driver: local
+  netbox-reports-files:
+    driver: local
+  netbox-scripts-files:
+    driver: local
+  netbox-postgres-data:
+    driver: local
