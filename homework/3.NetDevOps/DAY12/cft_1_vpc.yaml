@@ -1,0 +1,107 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create VPC and Nets For EC2
+
+Resources:
+  InternetGW:
+    Type: "AWS::EC2::InternetGateway"
+    DeletionPolicy: Delete
+    Properties:
+      Tags:
+        - Key: Name
+          Value: InternetGW
+
+  QYTVPC:
+    Type: "AWS::EC2::VPC"
+    DeletionPolicy: Delete
+    Properties:
+      CidrBlock: 10.1.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: QYT_EC2_VPC
+
+  AttachGW:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref QYTVPC
+      InternetGatewayId: !Ref InternetGW
+
+  EC2Net1:
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: Delete
+    Properties:
+      AvailabilityZone:
+        "Fn::Select":
+          - 0
+          - "Fn::GetAZs": ""
+      CidrBlock: 10.1.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: EC2Net1
+      VpcId: !Ref QYTVPC
+
+  EC2RouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref QYTVPC
+      Tags:
+        - Key: Name
+          Value: EC2_Route_Table
+
+  EC2Net1Association:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref EC2RouteTable
+      SubnetId: !Ref EC2Net1
+
+  EC2DefaultRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGW
+      RouteTableId: !Ref EC2RouteTable
+
+  EC2SecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupName: ec2_sg
+      GroupDescription: Allow HTTP ,HTTPS and SSH
+      VpcId: !Ref QYTVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: EC2_SG
+
+Outputs:
+  VPCId:
+    Description: VPC ID
+    Value: !Ref QYTVPC
+    Export:
+      Name: !Sub ${AWS::StackName}-VPCID
+
+  EC2Net1:
+    Description: The subnet ID of ECSNet1
+    Value: !Ref EC2Net1
+    Export:
+      Name: !Sub ${AWS::StackName}-EC2Net1-ID
+
+  EC2SecurityGroup:
+    Description: Security Allow HTTP and HTTPS
+    Value: !Ref EC2SecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-EC2SecurityGroup-ID

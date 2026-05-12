@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Full EC2
+
+Parameters:
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    ConstraintDescription: must be the name of an existing EC2 KeyPair
+    Default: us-east-1-zfs
+
+  NetworkStackName:
+    Type: String
+    Description: Name of an active CloudFormation stack that contains the networking resources, such as the subnet and security group, that will be used in this stack.
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: EC2VPC
+
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+
+Resources:
+  EC2ServiceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: AWS2022WebServiceRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCodeCommitFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+        - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+
+  EC2InstanceServiceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      InstanceProfileName: AWS2022WebServiceInstanceProfileName
+      Path: /
+      Roles:
+        - !Ref EC2ServiceRole
+
+  PlacementGroup:
+    Type: AWS::EC2::PlacementGroup
+    Properties:
+      Strategy: spread
+
+  EC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      InstanceType: t3.micro
+      Tenancy: default
+      PlacementGroupName: !Ref PlacementGroup
+      Tags:
+        - Key: Name
+          Value: EC2Full-zfs
+      KeyName:
+        Ref: KeyName
+      UserData:
+        "Fn::Base64": !Sub |
+          #!/bin/bash
+          sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+          sudo sed -i 's/#PermitRootLogin yes/PermitRootLogin yes/g' /etc/ssh/sshd_config
+          sudo sed -i 's/UsePAM yes/UsePAM no/g' /etc/ssh/sshd_config
+          sh -c 'echo root:Cisc0123' | sudo chpasswd
+          sudo service sshd restart
+      IamInstanceProfile: !Ref EC2InstanceServiceProfile
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref NetworkInterface
+          DeviceIndex: 0
+      ImageId: !Ref LatestAmiId
+
+  NetworkInterface:
+    Type: "AWS::EC2::NetworkInterface"
+    Properties:
+      GroupSet:
+        - "Fn::ImportValue": !Sub ${NetworkStackName}-EC2SecurityGroup-ID
+      SubnetId:
+        "Fn::ImportValue": !Sub ${NetworkStackName}-EC2Net1-ID
+
+Outputs:
+  InstanceId:
+    Description: InstanceId of the newly created EC2 instance
+    Value: !Ref EC2Instance
+
+  AZ:
+    Description: Availability Zone of the newly created EC2 instance
+    Value: !GetAtt EC2Instance.AvailabilityZone
+
+  PublicIP:
+    Description: Public IP address of the newly created EC2 instance
+    Value: !GetAtt EC2Instance.PublicIp
