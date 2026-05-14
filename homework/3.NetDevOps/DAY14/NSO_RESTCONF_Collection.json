@@ -1,0 +1,144 @@
+{
+  "info": {
+    "_postman_id": "netdevops-day14-nso-restconf",
+    "name": "NetDevOps DAY14 NSO RESTCONF SYSLOG",
+    "description": "DAY14 NSO 控制器 RESTCONF SYSLOG 配置测试集合",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "nso_ip",
+      "value": "10.10.1.205"
+    },
+    {
+      "key": "device_ip",
+      "value": "10.10.1.201"
+    },
+    {
+      "key": "username",
+      "value": "admin"
+    },
+    {
+      "key": "password",
+      "value": "Cisc0123"
+    },
+    {
+      "key": "severity",
+      "value": "7"
+    },
+    {
+      "key": "syslog_server_ip",
+      "value": "10.10.1.205"
+    }
+  ],
+  "item": [
+    {
+      "name": "syslog 创建",
+      "item": [
+        {
+          "name": "成功",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/yang-data+json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/yang-data+json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Cisco-IOS-XE-native:logging\": {\n    \"trap\": {\n      \"severity\": {{severity}}\n    },\n    \"hostip\": \"{{syslog_server_ip}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://{{device_ip}}/restconf/data/Cisco-IOS-XE-native:native/logging",
+              "protocol": "https",
+              "host": [
+                "{{device_ip}}"
+              ],
+              "path": [
+                "restconf",
+                "data",
+                "Cisco-IOS-XE-native:native",
+                "logging"
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "syslog 获取",
+      "item": [
+        {
+          "name": "成功",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/yang-data+json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://{{device_ip}}/restconf/data/Cisco-IOS-XE-native:native/logging",
+              "protocol": "https",
+              "host": [
+                "{{device_ip}}"
+              ],
+              "path": [
+                "restconf",
+                "data",
+                "Cisco-IOS-XE-native:native",
+                "logging"
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{username}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
