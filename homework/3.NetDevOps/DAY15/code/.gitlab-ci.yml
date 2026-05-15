@@ -1,15 +1,133 @@
 stages:
+  - nso_authgroup
+  - nso_devices
+  - nso_sync
   - nso_config
+  - pyats_diff
+
+ci_nso_authgroup:
+  stage: nso_authgroup
+  only:
+    - ci
+    - cd
+  variables:
+    nso_restconf_base_url: ${ci_nso_restconf_base_url}
+    nso_username: ${ci_nso_username}
+    nso_password: ${ci_nso_password}
+  script:
+    - python3 ./nso_restconf/restconf_1_authgroup.py
+  tags:
+    - netdevops
+
+cd_nso_authgroup:
+  stage: nso_authgroup
+  only:
+    - cd
+  variables:
+    nso_restconf_base_url: ${cd_nso_restconf_base_url}
+    nso_username: ${cd_nso_username}
+    nso_password: ${cd_nso_password}
+  script:
+    - python3 ./nso_restconf/restconf_1_authgroup.py
+  tags:
+    - netdevops
+
+ci_nso_devices:
+  stage: nso_devices
+  only:
+    - ci
+    - cd
+  variables:
+    nso_restconf_base_url: ${ci_nso_restconf_base_url}
+    nso_username: ${ci_nso_username}
+    nso_password: ${ci_nso_password}
+  script:
+    - python3 ./nso_restconf/restconf_2_devices.py
+  tags:
+    - netdevops
+
+cd_nso_devices:
+  stage: nso_devices
+  only:
+    - cd
+  variables:
+    nso_restconf_base_url: ${cd_nso_restconf_base_url}
+    nso_username: ${cd_nso_username}
+    nso_password: ${cd_nso_password}
+  script:
+    - python3 ./nso_restconf/restconf_2_devices.py
+  tags:
+    - netdevops
+
+ci_nso_sync:
+  stage: nso_sync
+  only:
+    - ci
+    - cd
+  variables:
+    nso_restconf_base_url: ${ci_nso_restconf_base_url}
+    nso_username: ${ci_nso_username}
+    nso_password: ${ci_nso_password}
+  script:
+    - python3 ./nso_restconf/restconf_3_sync.py
+  tags:
+    - netdevops
+
+cd_nso_sync:
+  stage: nso_sync
+  only:
+    - cd
+  variables:
+    nso_restconf_base_url: ${cd_nso_restconf_base_url}
+    nso_username: ${cd_nso_username}
+    nso_password: ${cd_nso_password}
+  script:
+    - python3 ./nso_restconf/restconf_3_sync.py
+  tags:
+    - netdevops
 
 ci_nso_config:
   stage: nso_config
   only:
     - ci
+    - cd
   variables:
     nso_restconf_base_url: ${ci_nso_restconf_base_url}
     nso_username: ${ci_nso_username}
     nso_password: ${ci_nso_password}
   script:
     - python3 ./nso_restconf/restconf_4_config.py
+  tags:
+    - netdevops
+
+cd_nso_config:
+  stage: nso_config
+  only:
+    - cd
+  variables:
+    nso_restconf_base_url: ${cd_nso_restconf_base_url}
+    nso_username: ${cd_nso_username}
+    nso_password: ${cd_nso_password}
+  script:
+    - python3 ./nso_restconf/restconf_4_config.py
+  tags:
+    - netdevops
+
+ci_pyats_diff:
+  stage: pyats_diff
+  only:
+    - ci
+    - cd
+  script:
+    - echo "PyATS diff stage - skipped for now"
+  tags:
+    - netdevops
+
+cd_pyats_diff:
+  stage: pyats_diff
+  only:
+    - cd
+  script:
+    - echo "PyATS diff stage - skipped for now"
   tags:
     - netdevops

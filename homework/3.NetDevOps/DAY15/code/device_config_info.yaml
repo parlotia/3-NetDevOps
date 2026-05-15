@@ -1,7 +1,12 @@
 devices:
   - name: C8Kv1
+    ip: 10.10.1.201
+    host_key_verification: none
+    authgroup: qytadmin
+    protocol: ssh
+    ned_id: cisco-ios-cli-3.8
+    admin_state: unlocked
     logging:
       host:
-        ipv4-host-list:
-          - ipv4-host: 10.10.1.205
+        - host: 10.10.1.101
       trap: debugging

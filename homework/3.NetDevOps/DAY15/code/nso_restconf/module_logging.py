@@ -4,6 +4,12 @@ import requests
 from restconf_0_basic_info import nso_restconf_base_url, auth_info, headers_json
 
 
+def load_device_logging_info():
+    with open('device_config_info.yaml') as file:
+        data = yaml.load(file, Loader=yaml.FullLoader)
+    return data.get('devices', [])
+
+
 def get_logging_config(device_name):
     url = (
         f"{nso_restconf_base_url}tailf-ncs:devices/device={device_name}"
@@ -21,6 +27,14 @@ def get_logging_config(device_name):
     return response.json()
 
 
+def get_devices_logging():
+    logging_result = []
+    for device in load_device_logging_info():
+        device_name = device['name']
+        logging_result.append(get_logging_config(device_name))
+    return logging_result
+
+
 def push_logging_config(device_name, logging_payload):
     url = (
         f"{nso_restconf_base_url}tailf-ncs:devices/device={device_name}"
@@ -36,7 +50,10 @@ def push_logging_config(device_name, logging_payload):
         sys.exit(1)
 
 
-def load_device_logging_info():
-    with open('device_config_info.yaml') as file:
-        data = yaml.load(file, Loader=yaml.FullLoader)
-    return data.get('devices', [])
+def config_devices_logging():
+    for device in load_device_logging_info():
+        logging_payload = device.get('logging')
+        if not logging_payload:
+            continue
+        push_logging_config(device['name'], logging_payload)
+    return None

@@ -1,0 +1,25 @@
+version: '3'
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:17.8.7-ce.0
+    hostname: gitlab.netdevops.com
+    ports:
+      - "8443:443"
+      - "8088:80"
+      - "2222:22"
+    volumes:
+      - /gitlab/config:/etc/gitlab
+      - /gitlab/logs:/var/log/gitlab
+      - /gitlab/data:/var/opt/gitlab
+      - ./server.pem:/etc/gitlab/ssl/gitlab.netdevops.com.crt:ro
+      - ./server-key.pem:/etc/gitlab/ssl/gitlab.netdevops.com.key:ro
+    environment:
+#      GITLAB_ROOT_EMAIL: "root@netdevops.com"
+#      GITLAB_ROOT_PASSWORD: "Cisc0123"
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://gitlab.netdevops.com:8443'
+        nginx['ssl_certificate'] = "/etc/gitlab/ssl/gitlab.netdevops.com.crt"
+        nginx['ssl_certificate_key'] = "/etc/gitlab/ssl/gitlab.netdevops.com.key"
+        nginx['listen_port'] = 443
+    restart: always

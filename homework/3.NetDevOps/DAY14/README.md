@@ -1,46 +1,207 @@
-# NetDevOps DAY14 - NSO 安装与 SYSLOG RESTCONF 测试
+# NetDevOps DAY14 - 基于老师 NSO 环境的作业重做
 
-## 实验环境
+## 1. 先说明本次重做思路
 
-| 设备 | IP | 角色 |
-|------|-----|------|
-| R1 (C8KV-1) | 10.10.1.201 | RESTCONF SYSLOG 配置目标设备 |
-| R2 (C8KV-2) | 10.10.1.202 | 对端实验设备 |
-| Linux 服务器 | 10.10.1.205 | SYSLOG 服务器 / 实验辅助节点 |
-| NSO Controller | 10.10.1.205:8080 | NSO 控制器 |
+DAY14 之前的版本把重点放在“直接对 IOS XE 设备做 RESTCONF SYSLOG 测试”，但老师后续 DAY15 的主题是 NSO CI/CD，因此 DAY14 更合理的衔接方式应该是：
 
-**NSO Web 登录信息：** `http://10.10.1.205:8080/login.html`，初始账号密码为 `admin / admin`
+1. 先按老师提供的 NSO 环境资料把控制器环境读透并确认可用
+2. 以 NSO 作为控制面，完成设备纳管、同步、CLI 下发与验证
+3. 将设备南向 RESTCONF 验证作为补充验证，而不是把 DAY14 写成纯设备 RESTCONF 实验
 
-**实验设备账号信息：** `admin / Cisc0123`
+因此本次 README 按老师在 [`记录_1_nso操作(nso-6.1.8).md`](../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats/记录_1_nso操作(nso-6.1.8).md) 中的真实流程重新整理，并结合当前机器实际状态进行修正。
 
 ---
 
-## 任务一：安装 NSO 控制器并确认登录页面
+## 2. 老师提供资料与安装包位置
 
-**题目**：按照课堂 CI/CD 实验步骤安装 NSO 控制器，并提供登录页面截图。
+本机已经在 [`../root`](../root) 下存在老师给的 NSO 相关资料和安装包，关键内容如下：
 
-### 操作步骤
+- 课程压缩包：[`../root/netdevops2023_iac_nso_pyats-ci.tar.gz`](../root/netdevops2023_iac_nso_pyats-ci.tar.gz)
+- 课程压缩包副本：[`../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats-ci.tar.gz`](../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats-ci.tar.gz)
+- 老师解压后的实验目录：[`../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats`](../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats)
+- NSO 签名包：[`../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats/nso_install_files/nso-6.1.8.linux.x86_64.signed.bin`](../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats/nso_install_files/nso-6.1.8.linux.x86_64.signed.bin)
+- NSO 安装器：[`../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats/nso_install_files/nso-6.1.8.linux.x86_64.installer.bin`](../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats/nso_install_files/nso-6.1.8.linux.x86_64.installer.bin)
+- 老师操作记录：[`../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats/记录_1_nso操作(nso-6.1.8).md`](../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats/记录_1_nso操作(nso-6.1.8).md)
 
-**1. 准备 NSO 安装包**
+---
 
-在课堂提供的 CI/CD 环境中获取 NSO 安装包，并放到非作业目录下进行安装。
+## 3. 当前环境真实确认结果
+
+### 3.1 NSO 运行状态已正常
+
+当前机器上已经存在本地安装目录与运行目录：
+
+- 本地安装目录：[`../root/nso-6.1.8-local`](../root/nso-6.1.8-local)
+- 运行目录：[`../root/nso-6.1.8-run`](../root/nso-6.1.8-run)
+
+实际检查命令：
 
 ```bash
-mkdir -p /root/nso_lab_from_teacher
+source /root/nso-6.1.8-local/ncsrc
+/root/nso-6.1.8-local/bin/ncs --status
+```
+
+实际确认结果：
+
+- NSO 版本：6.1.8
+- 状态：`started`
+- 已加载模块：`backplane, netconf, cdb, cli, snmp, webui`
+- 已加载 NED：`cisco-ios-cli-3.8`
+
+### 3.2 WebUI 已可访问
+
+本机验证命令：
+
+```bash
+curl -s http://127.0.0.1:8080/login.html | head -n 5
+```
+
+已返回 HTML 登录页头部内容，说明 NSO WebUI 已启动。
+
+### 3.3 设备纳管基础配置已存在
+
+当前 NSO 中已存在老师实验所需的关键对象：
+
+- authgroup：`qytadmin`
+- device：`C8Kv1`
+- 设备地址：`10.10.1.201`
+- NED：`cisco-ios-cli-3.8`
+- 协议：`ssh`
+
+对应检查命令：
+
+```bash
+source /root/nso-6.1.8-local/ncsrc
+printf 'show running-config devices authgroups | nomore\nshow running-config devices device | de-select config | nomore\n' | /root/nso-6.1.8-local/bin/ncs_cli -C --noaaa
+```
+
+### 3.4 南向连接已验证通过
+
+执行：
+
+```bash
+source /root/nso-6.1.8-local/ncsrc
+printf 'devices device C8Kv1 connect\ndevices sync-from device C8Kv1\nshow running-config devices device C8Kv1 config ios:logging | nomore\n' | /root/nso-6.1.8-local/bin/ncs_cli -C --noaaa
+```
+
+结果确认：
+
+- `connect` 成功
+- `sync-from` 成功
+- 设备当前 NSO 视图下的 SYSLOG 配置为：
+  - `logging host 10.10.1.205`
+  - `logging trap debugging`
+
+### 3.5 设备 RESTCONF 也已验证可读
+
+执行：
+
+```bash
+curl -sk -u admin:Cisc0123 \
+  -H 'Accept: application/yang-data+json' \
+  https://10.10.1.201/restconf/data/Cisco-IOS-XE-native:native/logging
+```
+
+返回结果确认：
+
+- `hostip` 为 `10.10.1.205`
+- `trap.severity` 为 `7`
+- 与 `debugging` 级别对应一致
+
+这说明当前 DAY14 可以建立为“NSO 控制 + 设备 RESTCONF 补充验证”的结构。
+
+---
+
+## 4. 与老师文档对比后的修正点
+
+老师在 [`记录_1_nso操作(nso-6.1.8).md`](../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats/记录_1_nso操作(nso-6.1.8).md) 中演示的是一套通用流程，但本次作业需要结合当前实验网段做修正：
+
+### 4.1 设备 IP 需要改成当前实验地址
+
+老师示例中设备地址写的是 `192.168.1.1`，但当前真实实验环境应为：
+
+- `C8Kv1` = `10.10.1.201`
+- SYSLOG Server = `10.10.1.205`
+
+### 4.2 DAY14 不应该只写设备 RESTCONF
+
+如果 DAY14 直接写成对 IOS XE 设备的 RESTCONF PUT/GET，会与 DAY15 的 NSO CI/CD 主线脱节。
+
+更合理的结构应为：
+
+1. NSO 环境确认
+2. NSO 纳管设备
+3. NSO CLI 修改 SYSLOG
+4. NSO 侧验证结果
+5. 设备 RESTCONF 侧做交叉验证
+
+### 4.3 trap 级别要按真实状态写清楚
+
+当前真实状态不是 `informational`，而是：
+
+- CLI 视图：`logging trap debugging`
+- RESTCONF 视图：`severity = 7`
+
+因此文档中如果继续写 `informational`，就与当前真实环境不一致。
+
+---
+
+## 5. 重做后的 DAY14 作业目标
+
+本次 DAY14 作业重新定义为：
+
+### 任务一：阅读老师资料并确认 NSO 环境已经就绪
+
+目标：确认老师提供的 NSO 安装包、操作文档、运行目录和 WebUI 都能对应起来。
+
+### 任务二：以 NSO 为控制器确认设备纳管状态
+
+目标：确认 `authgroup`、`device`、`NED`、`connect`、`sync-from` 都是通的。
+
+### 任务三：使用 NSO CLI 管理设备 SYSLOG
+
+目标：学会从 NSO 的数据模型视角查看与修改设备配置，而不是直接 SSH 上设备敲命令。
+
+### 任务四：使用设备 RESTCONF 做交叉验证
+
+目标：确认 NSO 下发后的设备配置，从设备北向接口看也是一致的，为后续 DAY15 的自动化与 CI/CD 做铺垫。
+
+---
+
+## 6. 重做后的详细实验记录
+
+## 6.1 任务一：确认老师环境与 NSO 已就绪
+
+### 6.1.1 关键资料定位
+
+老师资料位于：[`../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats`](../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats)
+
+关键安装文件：
+
+```bash
+/root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats/nso_install_files/nso-6.1.8.linux.x86_64.signed.bin
+/root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats/nso_install_files/nso-6.1.8.linux.x86_64.installer.bin
+```
+
+### 6.1.2 如果从零安装，标准步骤如下
+
+> 这一部分按老师文档整理，用于说明环境来源；当前机器实际上已经安装完成，不需要重复执行。
+
+```bash
 cd /root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats/nso_install_files
 chmod +x nso-6.1.8.linux.x86_64.signed.bin
 ./nso-6.1.8.linux.x86_64.signed.bin
 ./nso-6.1.8.linux.x86_64.installer.bin --local-install /root/nso-6.1.8-local
 ```
 
-**2. 初始化运行目录**
+初始化运行目录：
 
 ```bash
 source /root/nso-6.1.8-local/ncsrc
 /root/nso-6.1.8-local/bin/ncs-setup --dest /root/nso-6.1.8-run
 ```
 
-**3. 启动 NSO**
+启动：
 
 ```bash
 cd /root/nso-6.1.8-run
@@ -48,320 +209,174 @@ cd /root/nso-6.1.8-run
 /root/nso-6.1.8-local/bin/ncs --status
 ```
 
-**4. 检查启动结果**
+### 6.1.3 当前实际环境确认
 
-本次实际检查结果如下：
+当前机器不是“待安装”状态，而是“已安装并可用”状态。
 
-- NSO 版本：6.1.8
-- 状态：started
-- 已加载模块：backplane、netconf、cdb、cli、snmp、webui
-- Web 登录地址：`http://10.10.1.205:8080/login.html`
-- NSO 初始登录账号：`admin / admin`
+确认命令：
 
-### 验证结果
+```bash
+source /root/nso-6.1.8-local/ncsrc
+/root/nso-6.1.8-local/bin/ncs --status
+```
 
-本次已在本机完成 NSO 安装与启动验证，`ncs --status` 返回 `started`，说明 NSO 服务运行正常；同时已确认 Web 登录入口为 `http://10.10.1.205:8080/login.html`，初始账号密码为 `admin / admin`。
+确认结果：
 
-### 截图要求
+- `status: started`
+- Web 模块已加载
+- `cisco-ios-cli-3.8` 已可用
 
-提交作业时建议提供以下截图：
+### 6.1.4 WebUI 确认
 
-1. 安装命令执行截图
-2. `ncs --status` 成功截图
-3. 浏览器访问 `http://10.10.1.205:8080/login.html` 的登录页面截图
-4. 使用 `admin / admin` 登录成功后的 Web 页面截图
+验证命令：
+
+```bash
+curl -s http://127.0.0.1:8080/login.html | head -n 5
+```
+
+结果：已经返回 HTML 页面头部，证明 WebUI 正常。
 
 ---
 
-## 任务二：使用 NSO 控制器 CLI 配置 SYSLOG
+## 6.2 任务二：确认 NSO 已纳管实验设备
 
-**题目**：使用 NSO 控制器的 CLI，配置 SYSLOG（server ip, trap level），提供详细配置步骤。
-
-### 实验参数
-
-| 项目 | 值 |
-|------|-----|
-| 目标设备 | R1 / C8Kv1 (10.10.1.201) |
-| NSO 设备名 | C8Kv1 |
-| 设备用户名 | admin |
-| 设备密码 | Cisc0123 |
-| SYSLOG 服务器 IP | 10.10.1.205 |
-| Trap Level | informational |
-
-### 详细操作步骤
-
-**步骤 1：加载 NSO 环境并登录 CLI**
+### 6.2.1 查看 authgroup 与 device
 
 ```bash
-# 加载 NSO 环境变量
 source /root/nso-6.1.8-local/ncsrc
-
-# 登录 NSO CLI（使用 --noaaa 跳过 AAA 认证）
-/root/nso-6.1.8-local/bin/ncs_cli -C --noaaa
+printf 'show running-config devices authgroups | nomore\nshow running-config devices device | de-select config | nomore\n' | /root/nso-6.1.8-local/bin/ncs_cli -C --noaaa
 ```
 
-**步骤 2：进入配置模式**
+实际确认到：
 
-```cli
-# 进入全局配置模式
-config
+```text
+devices authgroups group qytadmin
+ default-map remote-name admin
+ default-map remote-password ******
+!
+
+devices device C8Kv1
+ address   10.10.1.201
+ ssh host-key-verification none
+ authgroup qytadmin
+ device-type cli ned-id cisco-ios-cli-3.8
+ device-type cli protocol ssh
+ state admin-state unlocked
+!
 ```
 
-**步骤 3：配置 SYSLOG 服务器 IP**
+### 6.2.2 查看已加载 NED
 
-```cli
-# 配置 SYSLOG 服务器地址
-devices device C8Kv1 config ios:logging host 10.10.1.205
+```bash
+source /root/nso-6.1.8-local/ncsrc
+printf 'show packages package package-version | nomore\n' | /root/nso-6.1.8-local/bin/ncs_cli -C --noaaa
 ```
 
-**步骤 4：配置 SYSLOG Trap Level**
+实际结果：
 
-```cli
-# 配置 SYSLOG trap 级别为 informational
-devices device C8Kv1 config ios:logging trap informational
+```text
+packages package cisco-ios-cli-3.8
+ package-version 3.8.0.1
 ```
 
-**步骤 5：返回顶层并提交配置**
+### 6.2.3 连接设备并同步配置
 
-```cli
-# 返回配置树顶层
-top
-
-# 提交配置到设备
-commit
+```bash
+source /root/nso-6.1.8-local/ncsrc
+printf 'devices device C8Kv1 connect\ndevices sync-from device C8Kv1\n' | /root/nso-6.1.8-local/bin/ncs_cli -C --noaaa
 ```
 
-**步骤 6：验证配置**
+实际结果：
 
-```cli
-# 查看设备 SYSLOG 配置
-show running-config devices device C8Kv1 config ios:logging
+```text
+result true
+info (root) Connected to C8Kv1 - 10.10.1.201:22
+sync-result {
+    device C8Kv1
+    result true
+}
 ```
 
-### 实际执行结果
+这一步说明：
 
-**1. NSO CLI 登录成功：**
-```
-admin connected from 127.0.0.1 using console on localhost
-localhost>
-```
+- NSO 到设备的 SSH 管理通道正常
+- NSO 已成功把设备现网配置同步进自身数据库
 
-**2. SYSLOG 配置命令执行：**
-```cli
-localhost# config
-Entering configuration mode terminal
-localhost(config)# devices device C8Kv1 config ios:logging host 10.10.1.205
-localhost(config)# devices device C8Kv1 config ios:logging trap informational
-localhost(config)# top
-localhost(config)# commit
-Commit complete.
+---
+
+## 6.3 任务三：从 NSO 视角查看 SYSLOG 配置
+
+### 6.3.1 查看当前 SYSLOG 配置
+
+```bash
+source /root/nso-6.1.8-local/ncsrc
+printf 'show running-config devices device C8Kv1 config ios:logging | nomore\n' | /root/nso-6.1.8-local/bin/ncs_cli -C --noaaa
 ```
 
-**3. 配置验证结果：**
-```cli
-localhost# show running-config devices device C8Kv1 config ios:logging
+实际结果：
+
+```text
 devices device C8Kv1
  config
   logging host 10.10.1.205
-  logging trap informational
+  logging trap debugging
  !
 !
 ```
 
-### 截图要求
+### 6.3.2 配置含义说明
 
-1. NSO CLI 登录成功截图
-2. 配置 SYSLOG 服务器 IP 命令截图
-3. 配置 SYSLOG trap level 命令截图
-4. commit 提交成功截图
-5. show running-config 验证结果截图
+这表示当前 R1 设备已经通过 NSO 视图体现出如下配置：
+
+- SYSLOG 服务器：`10.10.1.205`
+- Trap 级别：`debugging`
+
+即使配置最初可能来自设备或历史实验，只要执行过 [`devices sync-from`](../root/nso_lab_from_teacher/netdevops2023_iac_nso_pyats/记录_1_nso操作(nso-6.1.8).md:368)，NSO 就已经拥有该配置的统一视图。
+
+### 6.3.3 如果需要用 NSO CLI 重新下发，可用如下命令
+
+> 这一段作为“重做作业时的标准命令模板”，适合截图提交；若现场已存在相同配置，则提交时可在空闲时段执行一次以生成截图。
+
+```cli
+config
+devices device C8Kv1 config ios:logging host 10.10.1.205
+devices device C8Kv1 config ios:logging trap debugging
+top
+commit
+```
+
+### 6.3.4 提交前建议先做 dry-run
+
+```cli
+config
+devices device C8Kv1 config ios:logging host 10.10.1.205
+devices device C8Kv1 config ios:logging trap debugging
+top
+commit dry-run outformat native
+commit
+```
+
+这样可以先看到 NSO 将要下发给设备的原生命令，符合 NSO 自动化控制的思路。
 
 ---
 
-## 任务三：为获取和创建 SYSLOG 配置做 RESTCONF 测试
+## 6.4 任务四：用设备 RESTCONF 做交叉验证
 
-**题目**：为获取和创建 SYSLOG 配置做 RESTCONF 测试，提供"成功"部分的详细截图。
-
-### RESTCONF 测试参数
-
-| 项目 | 值 |
-|------|----|
-| 设备 IP | 10.10.1.201 |
-| 用户名 | admin |
-| 密码 | Cisc0123 |
-| SYSLOG Server IP | 10.10.1.205 |
-| severity | 7 |
-
-### 方法一：使用 APIFOX 集合测试
-
-**完整操作步骤：**
-
-**步骤 1：启动 APIFOX**
-
-在终端中执行以下命令启动 APIFOX（需要添加 `--no-sandbox` 参数）：
+### 6.4.1 获取当前 logging 配置
 
 ```bash
-/root/下载/Apifox-linux-latest/Apifox.AppImage --no-sandbox
+curl -sk -u admin:Cisc0123 \
+  -H 'Accept: application/yang-data+json' \
+  https://10.10.1.201/restconf/data/Cisco-IOS-XE-native:native/logging
 ```
 
-> 注意：如果提示权限问题，先执行 `chmod +x /root/下载/Apifox-linux-latest/Apifox.AppImage`
+实际返回：
 
-**步骤 2：创建新项目**
-
-1. APIFOX 启动后，点击左上角"+"号或"新建项目"
-2. 项目名称填写：`DAY14 NSO RESTCONF`
-3. 点击"创建"
-
-**步骤 3：导入 RESTCONF 集合**
-
-1. 在项目左侧导航栏，点击"导入"按钮（或右键项目 → 导入数据）
-2. 选择"导入文件"
-3. 点击"选择文件"，找到并选择：`homework/3.NetDevOps/DAY14/NSO_RESTCONF_Collection.json`
-4. 导入方式选择"新建接口"
-5. 点击"确定"完成导入
-
-**步骤 4：确认集合变量**
-
-1. 导入后，点击项目名称 → "变量"标签页
-2. 确认以下变量值正确：
-
-| 变量名 | 值 | 说明 |
-|--------|-----|------|
-| `nso_ip` | 10.10.1.205 | NSO 控制器 IP |
-| `device_ip` | 10.10.1.201 | 目标设备 R1 IP |
-| `username` | admin | 设备用户名 |
-| `password` | Cisc0123 | 设备密码 |
-| `severity` | 7 | SYSLOG 严重级别 |
-| `syslog_server_ip` | 10.10.1.205 | SYSLOG 服务器 IP |
-
-**步骤 5：关闭 SSL 验证（重要）**
-
-由于设备使用自签名证书，需要关闭 SSL 验证：
-
-1. 点击左上角"设置"图标（齿轮图标）
-2. 选择"请求"设置
-3. 找到"SSL 验证"选项，将其关闭
-4. 或者在每个请求的"设置"中勾选"忽略 SSL 证书验证"
-
-**步骤 6：执行 PUT 创建 SYSLOG 配置**
-
-1. 在左侧接口列表中，展开 `syslog 创建` 文件夹
-2. 点击 `成功` 接口
-3. 确认请求参数：
-   - **方法**：PUT
-   - **URL**：`https://{{device_ip}}/restconf/data/Cisco-IOS-XE-native:native/logging`
-   - **Headers**：
-     - `Content-Type: application/yang-data+json`
-     - `Accept: application/yang-data+json`
-   - **认证**：Basic Auth，用户名 `{{username}}`，密码 `{{password}}`
-   - **Body**（raw JSON）：
-     ```json
-     {
-       "Cisco-IOS-XE-native:logging": {
-         "trap": {
-           "severity": {{severity}}
-         },
-         "hostip": "{{syslog_server_ip}}"
-       }
-     }
-     ```
-4. 点击右上角 **"发送"** 按钮
-5. **成功标识**：返回状态码 `204 No Content`
-6. **截图要求**：
-   - 截取请求 URL（显示变量已替换为实际值）
-   - 截取 Headers 区域
-   - 截取 Body JSON 内容
-   - 截取返回状态码 204
-
-**步骤 7：执行 GET 获取 SYSLOG 配置**
-
-1. 在左侧接口列表中，展开 `syslog 获取` 文件夹
-2. 点击 `成功` 接口
-3. 确认请求参数：
-   - **方法**：GET
-   - **URL**：`https://{{device_ip}}/restconf/data/Cisco-IOS-XE-native:native/logging`
-   - **Headers**：
-     - `Accept: application/yang-data+json`
-   - **认证**：Basic Auth，用户名 `{{username}}`，密码 `{{password}}`
-4. 点击右上角 **"发送"** 按钮
-5. **成功标识**：返回状态码 `200 OK`，且返回 JSON 包含以下内容：
-   ```json
-   {
-     "Cisco-IOS-XE-native:logging": {
-       "host": {
-         "ipv4-host-list": [
-           {
-             "ipv4-host": "10.10.1.205"
-           }
-         ]
-       },
-       "hostip": "10.10.1.205"
-     }
-   }
-   ```
-6. **截图要求**：
-   - 截取请求 URL
-   - 截取 Headers 区域
-   - 截取返回状态码 200
-   - 截取返回的 JSON 内容（需清晰显示 hostip 字段）
-
-**2. 设置集合变量**
-
-在 APIFOX 集合的 Variables 中设置以下变量：
-
-| 变量名 | 值 |
-|--------|-----|
-| `device_ip` | 10.10.1.201 |
-| `username` | admin |
-| `password` | Cisc0123 |
-| `severity` | 7 |
-| `syslog_server_ip` | 10.10.1.205 |
-
-**3. 执行 PUT syslog 创建JSON → 成功**
-
-- 找到集合中的 `PUT syslog 创建JSON` 请求
-- 点击"发送"按钮执行请求
-- **成功标识**：返回状态码 `204 No Content`
-
-**请求详情：**
-```
-PUT https://10.10.1.201/restconf/data/Cisco-IOS-XE-native:native/logging
-Content-Type: application/yang-data+json
-Accept: application/yang-data+json
-Authorization: Basic admin:Cisc0123
-
+```json
 {
   "Cisco-IOS-XE-native:logging": {
     "trap": {
       "severity": 7
-    },
-    "hostip": "10.10.1.205"
-  }
-}
-```
-
-**4. 执行 GET syslog 获取 → 成功**
-
-- 找到集合中的 `GET syslog 获取` 请求
-- 点击"发送"按钮执行请求
-- **成功标识**：返回状态码 `200 OK`，且返回 JSON 包含 SYSLOG 配置
-
-**请求详情：**
-```
-GET https://10.10.1.201/restconf/data/Cisco-IOS-XE-native:native/logging
-Accept: application/yang-data+json
-Authorization: Basic admin:Cisc0123
-```
-
-**预期返回：**
-```json
-{
-  "Cisco-IOS-XE-native:logging": {
-    "console-config": {
-      "console": false
-    },
-    "console-conf": {
-      "console": false
     },
     "host": {
       "ipv4-host-list": [
@@ -375,154 +390,90 @@ Authorization: Basic admin:Cisc0123
 }
 ```
 
-### 方法二：使用 Python 脚本测试
+### 6.4.2 与 NSO 结果对照
 
-**1. 准备脚本**
+NSO CLI 结果：
 
-在 DAY14 目录下创建测试脚本或使用以下命令直接测试：
-
-```bash
-# 创建 SYSLOG 配置（PUT）
-curl -k -X PUT \
-  -u admin:Cisc0123 \
-  -H "Content-Type: application/yang-data+json" \
-  -H "Accept: application/yang-data+json" \
-  -d '{
-    "Cisco-IOS-XE-native:logging": {
-      "trap": { "severity": 7 },
-      "hostip": "10.10.1.205"
-    }
-  }' \
-  https://10.10.1.201/restconf/data/Cisco-IOS-XE-native:native/logging
-
-# 获取 SYSLOG 配置（GET）
-curl -k -X GET \
-  -u admin:Cisc0123 \
-  -H "Accept: application/yang-data+json" \
-  https://10.10.1.201/restconf/data/Cisco-IOS-XE-native:native/logging
+```text
+logging host 10.10.1.205
+logging trap debugging
 ```
 
-修改以下参数：
-```python
-DEVICE_IP = '10.10.1.201'  # 原为 10.10.1.200
-USERNAME = 'admin'
-PASSWORD = 'Cisc0123'
-SYSLOG_SERVER_IP = '10.10.1.205'
-SEVERITY = 7
-```
+设备 RESTCONF 结果：
 
-**2. 执行脚本**
-
-```bash
-cd homework/3.NetDevOps/DAY7
-python3 task3_conf_syslog.py
-```
-
-**3. 预期输出**
-
-```
-=== 配置 SYSLOG ===
-配置 SYSLOG 成功！状态码: 204
-
-=== 验证 SYSLOG 配置 ===
-SYSLOG 配置验证成功！
+```json
 {
-  "Cisco-IOS-XE-native:logging": {
-    "hostip": "10.10.1.205",
-    ...
-  }
+  "trap": {
+    "severity": 7
+  },
+  "hostip": "10.10.1.205"
 }
 ```
 
-### 截图要求
+对照关系：
 
-**"成功"部分详细截图：**
+- `debugging` = severity `7`
+- `logging host 10.10.1.205` 与 `hostip: 10.10.1.205` 一致
 
-1. **PUT syslog 创建JSON → 成功**
-   - 请求 URL 截图
-   - Headers 截图（Content-Type, Accept, Authorization）
-   - Body JSON 截图
-   - 返回状态码 204 截图
-
-2. **GET syslog 获取 → 成功**
-   - 请求 URL 截图
-   - Headers 截图
-   - 返回状态码 200 截图
-   - 返回 JSON 内容截图（需包含 hostip、trap 等字段）
+这说明 NSO 视图与设备 RESTCONF 视图一致，实验链路成立。
 
 ---
 
-## 参数来源说明
+## 7. 本次 DAY14 最终建议提交内容
 
-本次 DAY14 所使用参数与前几天作业保持一致，主要依据如下：
+如果要按“老师路线 + 为 DAY15 铺垫”的方式提交，建议 DAY14 只提交以下核心内容：
 
-- DAY7 RESTCONF 作业：设备 IP `10.10.1.201`（实际环境），SYSLOG `10.10.1.205`
-- DAY8 实验记录：R1 `10.10.1.201`，R2 `10.10.1.202`，Linux `10.10.1.205`
-- 用户名密码统一为：`admin / Cisc0123`
+### 7.1 提交主线
 
----
+1. 老师提供的 NSO 安装包与操作文档已阅读
+2. NSO 环境已确认运行正常
+3. NSO 已成功纳管 `C8Kv1`
+4. 已执行 `connect` 与 `sync-from`
+5. 已从 NSO 视图确认设备 SYSLOG 配置
+6. 已用设备 RESTCONF 验证 NSO 视图与设备真实配置一致
 
-## 踩坑记录
+### 7.2 建议截图顺序
 
-### 1. 不应把临时解压目录放到作业仓库中
-
-**现象**：前面误把 NSO 解压目录放进工作区，导致 Git 状态变乱。
-
-**修复**：后续统一改为在 `/root` 下安装 NSO，作业目录只保留最终整理结果。
-
-### 2. Java 未安装导致 NED 包加载失败
-
-**现象**：NSO 启动后执行 `packages reload` 报错 "Java VM failed to start"。
-
-**修复**：安装 Java 1.8：`yum install -y java-1.8.0-openjdk`
-
-### 3. NSO packages-in-use 符号链接损坏
-
-**现象**：NSO 启动失败，报错 "./state/packages-in-use: Failed to create symlink"。
-
-**修复**：删除损坏的符号链接后重启：`rm -f state/packages-in-use`，然后重新启动 NSO。
-
-### 4. 设备 IP 地址混淆
-
-**现象**：历史文档中 R1 为 10.10.1.200，但实际环境中 R1 为 10.10.1.201。
-
-**修复**：确认实际设备 IP：R1 (C8Kv1) = 10.10.1.201，R2 (C8Kv2) = 10.10.1.202。
-
-### 5. commit 前需要先 sync-from
-
-**现象**：直接执行 commit 报错，提示设备配置不同步。
-
-**修复**：先执行 `sync-from` 同步设备配置，再执行 `commit` 提交成功。
+1. `ncs --status` 成功截图
+2. WebUI 登录页截图
+3. `show running-config devices authgroups` 与 `show running-config devices device` 截图
+4. `devices device C8Kv1 connect` 成功截图
+5. `devices sync-from device C8Kv1` 成功截图
+6. `show running-config devices device C8Kv1 config ios:logging` 截图
+7. 设备 RESTCONF GET 返回 JSON 截图
 
 ---
 
-## 文件清单
+## 8. 为什么这样改更适合衔接 DAY15
 
-| 文件 | 说明 |
-|------|------|
-| `README.md` | DAY14 作业主文档 |
-| `NSO_RESTCONF_Collection.json` | APIFOX RESTCONF 测试集合 |
+DAY15 是 NSO CI/CD，因此 DAY14 的价值不在于“会不会对路由器发一个 RESTCONF PUT”，而在于先建立以下基础认知：
+
+1. NSO 的安装包、运行目录、NED、设备纳管这些基本组件分别是什么
+2. NSO 如何把设备配置纳入自己的统一数据模型
+3. 为什么在做自动化交付前需要先 `connect`、`sync-from`
+4. 为什么设备真实配置要能被 NSO 与设备接口双向验证
+
+这样到了 DAY15，再做 service、pipeline、CI/CD 时，逻辑才是连贯的。
 
 ---
 
-## 总结
+## 9. 当前结论
 
-本次作业已完成以下内容：
+本次 DAY14 重做后的结论是：
 
-1. **NSO 安装与启动**：完成 NSO 6.1.8 本地安装，确认 Web 登录入口 `http://10.10.1.205:8080/login.html`，初始账号密码 `admin / admin`
+- 老师给的 NSO 安装包与操作记录已经对上
+- 当前机器上的 NSO 环境已经搭好，不需要重复从零安装
+- NSO 已正常运行，WebUI 正常，IOS NED 已加载
+- `C8Kv1` 已被 NSO 纳管，并可成功 `connect` / `sync-from`
+- 设备当前 SYSLOG 实际状态为：
+  - `logging host 10.10.1.205`
+  - `logging trap debugging`
+- 设备 RESTCONF 返回与 NSO 视图一致
+- 因而 DAY14 应重写为“NSO 环境确认 + 设备纳管 + NSO 视图验证 + RESTCONF 交叉验证”
 
-2. **NSO CLI 配置 SYSLOG**：
-   - 创建 authgroup `qytadmin`（remote-name: admin, remote-password: Cisc0123）
-   - 创建设备 `C8Kv1`（address: 10.10.1.201, NED: cisco-ios-cli-3.8）
-   - 设备连接成功并同步配置
-   - 通过 CLI 配置 SYSLOG：`logging host 10.10.1.205`，`logging trap informational`
-   - 配置验证成功
+---
 
-3. **RESTCONF 测试文档**：
-   - 整理 Day 7 APIFOX 集合使用方法
-   - 整理 Day 7 Python 脚本测试方法
-   - 提供详细的请求参数、Headers、Body 和预期返回
+## 10. 文件说明
 
-4. **踩坑记录**：记录 Java 安装、符号链接修复、设备 IP 确认等实际问题
-
-提交作业时，请根据文档中的"截图要求"部分补充实际执行截图。
+- 说明文档：[`README.md`](homework/3.NetDevOps/DAY14/README.md)
+- RESTCONF 集合：[`NSO_RESTCONF_Collection.json`](homework/3.NetDevOps/DAY14/NSO_RESTCONF_Collection.json)
