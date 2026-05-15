@@ -1,0 +1,15 @@
+stages:
+  - nso_config
+
+ci_nso_config:
+  stage: nso_config
+  only:
+    - ci
+  variables:
+    nso_restconf_base_url: ${ci_nso_restconf_base_url}
+    nso_username: ${ci_nso_username}
+    nso_password: ${ci_nso_password}
+  script:
+    - python3 ./nso_restconf/restconf_4_config.py
+  tags:
+    - netdevops

@@ -1,0 +1,7 @@
+devices:
+  - name: C8Kv1
+    logging:
+      host:
+        ipv4-host-list:
+          - ipv4-host: 10.10.1.205
+      trap: debugging
