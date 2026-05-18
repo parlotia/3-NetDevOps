@@ -1,0 +1,54 @@
+services:
+  elasticsearch:
+    image: elastic/elasticsearch:7.8.1
+    privileged: true
+    environment:
+      - discovery.type=single-node
+      - node.name=qytang_es
+      - cluster.name=qytang_es_cluster
+      - network.host=0.0.0.0
+      - bootstrap.memory_lock=true
+      - ES_JAVA_OPTS=-Xms4g -Xmx4g
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - qyt_net
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    restart: always
+
+  kibana:
+    image: elastic/kibana:7.8.1
+    privileged: true
+    environment:
+      - SERVER_NAME=qyt_kibana
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - PATH_DATA=/usr/share/kibana/data
+      - NODE_OPTIONS=--max_old_space_size=4096
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - qyt_net
+    ports:
+      - "5601:5601"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    depends_on:
+      - elasticsearch
+    restart: always
+
+networks:
+  qyt_net:
+    driver: bridge

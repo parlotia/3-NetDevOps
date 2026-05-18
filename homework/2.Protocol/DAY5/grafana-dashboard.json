@@ -1,0 +1,383 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "zfs-dashboard",
+    "title": "ZFS_Dashboard",
+    "tags": ["router", "snmp", "monitoring"],
+    "timezone": "browser",
+    "schemaVersion": 26,
+    "version": 1,
+    "refresh": "1m",
+    "panels": [
+      {
+        "id": 1,
+        "title": "CPU利用率",
+        "type": "graph",
+        "gridPos": {"h": 9, "w": 12, "x": 0, "y": 0},
+        "datasource": "InfluxDB",
+        "targets": [
+          {
+            "measurement": "router_monitor",
+            "policy": "default",
+            "resultFormat": "time_series",
+            "orderByTime": "ASC",
+            "tags": [
+              {
+                "key": "device_ip",
+                "operator": "=",
+                "value": "10.10.1.200"
+              }
+            ],
+            "groupBy": [
+              {
+                "type": "time",
+                "params": ["$__interval"]
+              },
+              {
+                "type": "fill",
+                "params": ["null"]
+              }
+            ],
+            "select": [
+              [
+                {
+                  "type": "field",
+                  "params": ["cpu_percent"]
+                },
+                {
+                  "type": "mean",
+                  "params": []
+                }
+              ]
+            ],
+            "alias": "10.10.1.200 CPU"
+          },
+          {
+            "measurement": "router_monitor",
+            "policy": "default",
+            "resultFormat": "time_series",
+            "orderByTime": "ASC",
+            "tags": [
+              {
+                "key": "device_ip",
+                "operator": "=",
+                "value": "10.10.1.201"
+              }
+            ],
+            "groupBy": [
+              {
+                "type": "time",
+                "params": ["$__interval"]
+              },
+              {
+                "type": "fill",
+                "params": ["null"]
+              }
+            ],
+            "select": [
+              [
+                {
+                  "type": "field",
+                  "params": ["cpu_percent"]
+                },
+                {
+                  "type": "mean",
+                  "params": []
+                }
+              ]
+            ],
+            "alias": "10.10.1.201 CPU"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "CPU %",
+            "min": 0,
+            "max": 100,
+            "format": "percent",
+            "unit": "percent",
+            "show": true
+          },
+          {
+            "show": false
+          }
+        ],
+        "xAxis": {
+          "show": true,
+          "mode": "time"
+        },
+        "legend": {
+          "show": true,
+          "values": false,
+          "current": false,
+          "avg": false,
+          "max": false
+        },
+        "tooltip": {
+          "shared": true,
+          "sort": 0,
+          "value_type": "individual"
+        },
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2,
+        "pointradius": 0,
+        "points": false,
+        "bars": false,
+        "stack": false,
+        "percentage": false,
+        "nullPointMode": "connected",
+        "dashLength": 10,
+        "dashes": false,
+        "spaceLength": 10,
+        "steppedLine": false
+      },
+      {
+        "id": 2,
+        "title": "内存利用率",
+        "type": "graph",
+        "gridPos": {"h": 9, "w": 12, "x": 12, "y": 0},
+        "datasource": "InfluxDB",
+        "targets": [
+          {
+            "measurement": "router_monitor",
+            "policy": "default",
+            "resultFormat": "time_series",
+            "orderByTime": "ASC",
+            "tags": [
+              {
+                "key": "device_ip",
+                "operator": "=",
+                "value": "10.10.1.200"
+              }
+            ],
+            "groupBy": [
+              {
+                "type": "time",
+                "params": ["$__interval"]
+              },
+              {
+                "type": "fill",
+                "params": ["null"]
+              }
+            ],
+            "select": [
+              [
+                {
+                  "type": "field",
+                  "params": ["mem_percent"]
+                },
+                {
+                  "type": "mean",
+                  "params": []
+                }
+              ]
+            ],
+            "alias": "10.10.1.200 内存"
+          },
+          {
+            "measurement": "router_monitor",
+            "policy": "default",
+            "resultFormat": "time_series",
+            "orderByTime": "ASC",
+            "tags": [
+              {
+                "key": "device_ip",
+                "operator": "=",
+                "value": "10.10.1.201"
+              }
+            ],
+            "groupBy": [
+              {
+                "type": "time",
+                "params": ["$__interval"]
+              },
+              {
+                "type": "fill",
+                "params": ["null"]
+              }
+            ],
+            "select": [
+              [
+                {
+                  "type": "field",
+                  "params": ["mem_percent"]
+                },
+                {
+                  "type": "mean",
+                  "params": []
+                }
+              ]
+            ],
+            "alias": "10.10.1.201 内存"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "内存 %",
+            "min": 0,
+            "max": 100,
+            "format": "percent",
+            "unit": "percent",
+            "show": true
+          },
+          {
+            "show": false
+          }
+        ],
+        "xAxis": {
+          "show": true,
+          "mode": "time"
+        },
+        "legend": {
+          "show": true,
+          "values": false,
+          "current": false,
+          "avg": false,
+          "max": false
+        },
+        "tooltip": {
+          "shared": true,
+          "sort": 0,
+          "value_type": "individual"
+        },
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2,
+        "pointradius": 0,
+        "points": false,
+        "bars": false,
+        "stack": false,
+        "percentage": false,
+        "nullPointMode": "connected",
+        "dashLength": 10,
+        "dashes": false,
+        "spaceLength": 10,
+        "steppedLine": false
+      },
+      {
+        "id": 3,
+        "title": "当前CPU利用率",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 9},
+        "datasource": "InfluxDB",
+        "targets": [
+          {
+            "measurement": "router_monitor",
+            "policy": "default",
+            "resultFormat": "table",
+            "orderByTime": "ASC",
+            "tags": [],
+            "groupBy": [
+              {
+                "type": "tag",
+                "params": ["device_ip"]
+              }
+            ],
+            "select": [
+              [
+                {
+                  "type": "field",
+                  "params": ["cpu_percent"]
+                },
+                {
+                  "type": "last",
+                  "params": []
+                }
+              ]
+            ]
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 50},
+                {"color": "red", "value": 80}
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "textMode": "auto"
+        }
+      },
+      {
+        "id": 4,
+        "title": "当前内存利用率",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 9},
+        "datasource": "InfluxDB",
+        "targets": [
+          {
+            "measurement": "router_monitor",
+            "policy": "default",
+            "resultFormat": "table",
+            "orderByTime": "ASC",
+            "tags": [],
+            "groupBy": [
+              {
+                "type": "tag",
+                "params": ["device_ip"]
+              }
+            ],
+            "select": [
+              [
+                {
+                  "type": "field",
+                  "params": ["mem_percent"]
+                },
+                {
+                  "type": "last",
+                  "params": []
+                }
+              ]
+            ]
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 60},
+                {"color": "red", "value": 85}
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "textMode": "auto"
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  },
+  "overwrite": true,
+  "inputs": [
+    {
+      "name": "DS_INFLUXDB",
+      "pluginId": "influxdb",
+      "type": "datasource",
+      "value": "InfluxDB"
+    }
+  ]
+}

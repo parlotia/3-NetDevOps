@@ -1,0 +1,461 @@
+拉起PSQL数据库
+创建文件 "docker-compose.yaml":
+
+version: '3'
+services:
+  qyt-psql:
+    environment:
+      - POSTGRES_PASSWORD=Cisc0123
+    image: "postgres:13.7"
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init-user-db.sh:/docker-entrypoint-initdb.d/init-user-db.sh
+    networks:
+      - psql
+
+networks:
+  psql:
+    driver: bridge
+创建文件 "init-user-db.sh":
+
+#!/bin/bash
+set -e
+
+psql -v ON_ERROR_STOP=1 --username postgres <<-EOSQL
+    CREATE USER qytangdbuser;
+    CREATE DATABASE qytangdb;
+    GRANT ALL PRIVILEGES ON DATABASE qytangdb TO qytangdbuser;
+    ALTER USER qytangdbuser WITH PASSWORD 'Cisc0123';
+EOSQL
+进入上两个文件所在目录, 使用docker-compose拉起容器:
+
+docker-compose up -d
+创建数据库表
+数据库结构分析:
+
+
+使用如下代码创建数据库表(代码与基础课数据库ORM高级部分代码基本相同):
+
+具体代码 (day7_1_create_db.py):
+
+#!/usr/bin/env python3
+# -*- coding=utf-8 -*-
+
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+import datetime
+
+tzutc_8 = datetime.timezone(datetime.timedelta(hours=8))  # 设置时区为东八区
+
+# -------------------------psql-------------------------
+# psycopg2 (yum install postgresql-devel;pip3 install psycopg2-binary)
+
+engine = create_engine('postgresql+psycopg2://qytangdbuser:Cisc0123@10.1.1.11/qytangdb')
+
+Base = declarative_base()
+
+
+class Router(Base):
+    __tablename__ = 'router'
+
+    id = Column(Integer, primary_key=True)
+    router_name = Column(String(64), nullable=False, index=True)
+    ip = Column(String(64), nullable=False, index=True)
+    username = Column(String(64), nullable=False)
+    password = Column(String(64), nullable=False)
+
+    # ----------接口------------
+    interface = relationship('Interface', back_populates="router", passive_deletes=True)
+
+    # ----------OSPF------------
+    # uselist=False表示onetoone
+    ospf_process = relationship('OSPFProcess', back_populates="router", uselist=False, passive_deletes=True)
+
+    # --------CPU利用率----------
+    cpu_usage = relationship('CPUUsage', back_populates="router", passive_deletes=True)
+
+    # --------设备配置-----------
+    device_config = relationship('DeviceConfig', back_populates="router", passive_deletes=True)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.router_name})"
+
+
+class DeviceConfig(Base):
+    __tablename__ = 'device_config'
+
+    id = Column(Integer, primary_key=True)
+    router_id = Column(Integer, ForeignKey("router.id", ondelete='CASCADE'), nullable=False)
+    device_config = Column(String(99999), nullable=False)
+    config_md5 = Column(String(100), nullable=False)
+    router = relationship('Router', back_populates="device_config", passive_deletes=True)
+    record_time = Column(DateTime(timezone='Asia/Chongqing'), default=datetime.datetime.now)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(Device IP: {self.router.ip} " \
+               f"| Datetime: {self.record_time} " \
+               f"| Config MD5: {self.config_md5})"
+
+
+class Interface(Base):
+    __tablename__ = 'interface'
+
+    id = Column(Integer, primary_key=True)
+    router_id = Column(Integer, ForeignKey("router.id", ondelete='CASCADE'), nullable=False)
+    interface_name = Column(String(64), nullable=False)
+    ip = Column(String(64), nullable=False)
+    mask = Column(String(64), nullable=False)
+    router = relationship('Router', back_populates="interface", passive_deletes=True)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(Router: {self.router.router_name} "\
+               f"| Interface_name: {self.interface_name} " \
+               f"| IP: {self.ip} / {self.mask})"
+
+
+class OSPFProcess(Base):
+    __tablename__ = 'ospf_process'
+
+    id = Column(Integer, primary_key=True)
+    router_id = Column(Integer, ForeignKey("router.id", ondelete='CASCADE'), nullable=False)
+    processid = Column(Integer, nullable=False)
+    routerid = Column(String(64), nullable=False)
+    router = relationship('Router', back_populates="ospf_process", passive_deletes=True)
+    area = relationship('Area', back_populates="ospf_process", passive_deletes=True)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(Router: {self.router.router_name} " \
+               f"| Process: {self.processid})"
+
+
+class Area(Base):
+    __tablename__ = 'area'
+
+    id = Column(Integer, primary_key=True)
+    ospfprocess_id = Column(Integer, ForeignKey("ospf_process.id", ondelete='CASCADE'), nullable=False)
+    area_id = Column(Integer, nullable=False)
+    ospf_process = relationship('OSPFProcess', back_populates="area", passive_deletes=True)
+    ospf_network = relationship('OSPFNetwork', back_populates="area", passive_deletes=True)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(Router: {self.ospf_process.router.router_name} " \
+               f"| Process: {self.ospf_process.processid} " \
+               f"| Area: {self.area_id})"
+
+
+class OSPFNetwork(Base):
+    __tablename__ = 'ospf_network'
+
+    id = Column(Integer, primary_key=True)
+    area_id = Column(Integer, ForeignKey("area.id", ondelete='CASCADE'), nullable=False)
+    network = Column(String(64), nullable=False)
+    wildmask = Column(String(64), nullable=False)
+    area = relationship('Area', back_populates="ospf_network", passive_deletes=True)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(Router: {self.area.ospf_process.router.router_name} " \
+               f"| Process: {self.area.ospf_process.processid} " \
+               f"| Area: {self.area.area_id} " \
+               f"| Network: {self.network}/{self.wildmask})"
+
+
+class CPUUsage(Base):
+    __tablename__ = 'cpu_usage'
+
+    id = Column(Integer, primary_key=True)
+    router_id = Column(Integer, ForeignKey("router.id", ondelete='CASCADE'), nullable=False)
+    cpu_useage_percent = Column(Integer, nullable=False)
+    cpu_useage_datetime = Column(DateTime(timezone='Asia/Chongqing'), default=datetime.datetime.now)
+    router = relationship('Router', back_populates="cpu_usage", passive_deletes=True)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(Router: {self.router.router_name} " \
+               f"| Datetime: {self.cpu_useage_datetime} " \
+               f"| Percent: {self.cpu_useage_percent})"
+
+
+if __name__ == '__main__':
+    # checkfirst=True，表示创建表前先检查该表是否存在，如同名表已存在则不再创建。其实默认就是True
+    Base.metadata.create_all(engine, checkfirst=True)
+把数据写入数据库(至少创建两个路由器的接口和OSPF数据)
+可以根据自己环境调整数据内容 (day7_2_insert_data.py):
+
+#!/usr/bin/env python3
+# -*- coding=utf-8 -*-
+
+from sqlalchemy.orm import sessionmaker
+from new_homework.day7.code.day7_1_create_db import Router, Interface, OSPFProcess, Area, OSPFNetwork, engine
+
+Session = sessionmaker(bind=engine)
+session = Session()
+
+
+# 设备接口信息
+c8kv1_ifs = [{'ifname': "GigabitEthernet2", 'ip': "172.16.1.1", 'mask': "255.255.255.0"},
+             {'ifname': "Loopback0", 'ip': "1.1.1.1", 'mask': "255.255.255.255"}]
+
+c8kv2_ifs = [{'ifname': "GigabitEthernet2", 'ip': "172.16.1.2", 'mask': "255.255.255.0"},
+             {'ifname': "Loopback0", 'ip': "2.2.2.2", 'mask': "255.255.255.255"}]
+
+# 设备OSPF信息
+c8kv1_ospf = {"process_id": 1,
+              "router_id": "1.1.1.1",
+              "areas": [{'area_id': 0, 'networks': [{'ip': "172.16.1.0", 'wildmask': "0.0.0.255"},
+                                                    {'ip': "1.1.1.1", 'wildmask': "0.0.0.0"}]}]}
+
+c8kv2_ospf = {"process_id": 1,
+              "router_id": "2.2.2.2",
+              "areas": [{'area_id': 0, 'networks': [{'ip': "172.16.1.0", 'wildmask': "0.0.0.255"},
+                                                    {'ip': "2.2.2.2", 'wildmask': "0.0.0.0"}]}]}
+username = 'admin'
+password = 'Cisc0123'
+
+# 汇总后数据
+all_network_data = [{'ip': "196.21.5.211",
+                     'router_name': 'C8Kv1',
+                     'username': username,
+                     'password': password,
+                     'interfaces': c8kv1_ifs,
+                     'ospf': c8kv1_ospf},
+                    {'ip': "196.21.5.212",
+                     'router_name': 'C8Kv2',
+                     'username': username,
+                     'password': password,
+                     'interfaces': c8kv2_ifs,
+                     'ospf': c8kv2_ospf}]
+
+# 把之前的内容删除
+session.query(Router).delete()
+
+
+for device in all_network_data:
+    # 添加Router
+    router_device = Router(router_name=device['router_name'],
+                           username=device['username'],
+                           password=device['password'],
+                           ip=device['ip'])
+    session.add(router_device)
+
+    # 添加Interface
+    for ifs in device['interfaces']:
+        new_if = Interface(router=router_device, interface_name=ifs['ifname'], ip=ifs['ip'], mask=ifs['mask'])
+        session.add(new_if)
+
+    # 添加OSPFProcess
+    router_device_process = OSPFProcess(router=router_device,
+                                        processid=device["ospf"]["process_id"],
+                                        routerid=device["ospf"]["router_id"])
+
+    # 添加Area
+    for device_area in device["ospf"]["areas"]:
+        router_device_area = Area(ospf_process=router_device_process, area_id=device_area["area_id"])
+        session.add(router_device_area)
+
+        # 添加Area下的每一个OSPFNetwork
+        for net in device_area["networks"]:
+            new_net = OSPFNetwork(area=router_device_area, network=net['ip'], wildmask=net['wildmask'])
+            session.add(new_net)
+
+session.commit()
+从数据库读取数据, 然后使用协程Netmiko实现多设备配置
+下面是完整配置 (day7_3_config_device.py):
+
+#!/usr/bin/env python3
+# -*- coding=utf-8 -*-
+
+# ORM
+from sqlalchemy.orm import sessionmaker
+from new_homework.day7.code.day7_1_create_db import Router, engine
+
+# 导入正课中的netmiko代码
+from new_homework.day7.code.tools.ssh_client_netmiko import netmiko_config_cred
+
+# 协程相关
+import asyncio
+import os
+import threading
+
+import pprint
+
+# 导入jinja2模块, 并设置模板目录
+from jinja2 import Template
+tem_path = './templates/'
+
+# jinja2读取Cisco接口配置模板
+with open(tem_path + 'cisco_ios_interface.template', encoding='utf-8') as f:
+    interface_config_template = Template(f.read())
+
+# jinja2读取Cisco OSPF配置模板
+with open(tem_path + 'cisco_ios_ospf.template', encoding='utf-8') as f:
+    ospf_config_template = Template(f.read())
+
+# 协程任务循环
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+
+
+# 定义netmiko的协程函数
+async def async_netmiko(task_id, ip, username, password, cmds_list):
+    """在线程池中异步执行 Netmiko 配置推送，并打印任务开始/结束状态。"""
+    print(f'ID: {task_id} Started')
+    print(os.getpid(), threading.current_thread().ident)
+    result = await loop.run_in_executor(None, netmiko_config_cred, ip, username, password, cmds_list)
+    print(f'ID: {task_id} Stopped')
+    return result
+
+# 连接数据库的会话
+Session = sessionmaker(bind=engine)
+session = Session()
+
+
+# 循环任务计数号
+task_no = 1
+
+# 协程的任务清单
+tasks = []
+
+# 查询所有路由器
+all_routers = session.query(Router).all()
+
+
+for router in all_routers:
+    # 每一个路由器最终配置命令的列表
+    router_final_config_list = []
+
+    # 提取路由器IP
+    router_ip = router.ip
+    # 提取路由器登录用户名
+    login_username = router.username
+    # 提取路由器登录密码
+    login_password = router.password
+    # 接口配置列表
+    interface_config_list = []
+    # 找到这个路由器的每一个接口
+    for interface in router.interface:
+        # 提取接口名字
+        interface_name = interface.interface_name
+        # 提取接口IP
+        interface_ip = interface.ip
+        # 提取接口掩码
+        interface_mask = interface.mask
+        # 把每一个接口配置的字典, 放入列表"interface_config_list"
+        interface_config_list.append({"interface_name": interface_name,
+                                      "interface_ip": interface_ip,
+                                      "interface_mask": interface_mask
+                                      })
+    # 路由器接口配置模板内容如下:
+    # {% for i in interface_list %}
+    #     interface {{ i.interface_name }}
+    #           ip address {{ i.interface_ip }} {{ i.interface_mask }}
+    #           no shutdown
+    # {% endfor %}
+    pprint.pprint(interface_config_list)
+    # 期望输出:
+    # [{'interface_ip': '10.1.1.1',
+    #   'interface_mask': '255.255.255.0',
+    #   'interface_name': 'GigabitEthernet1'},
+    #  {'interface_ip': '1.1.1.1',
+    #   'interface_mask': '255.255.255.255',
+    #   'interface_name': 'Loopback0'}]
+    # 替换接口配置模板产生配置(多行字符串)
+    interface_config_result = interface_config_template.render(interface_list=interface_config_list)
+    # 把多行字符串, 通过".split('\n')"切分为一行一行的命令, 放入最终配置命令列表"router_final_config_list"
+    router_final_config_list.extend(interface_config_result.split('\n'))
+
+    # 提取路由器OSPF进程的数据库条目
+    router_ospf_process = router.ospf_process
+    # 提取OSPF进程ID
+    router_ospf_process_id = router_ospf_process.processid
+    # 提取路由器router_id
+    router_id = router_ospf_process.routerid
+
+    # 产生OSPF配置的字典, 先写入OSPF进程ID和router_id
+    ospf_dict = {"ospf_process_id": router_ospf_process_id,
+                 "router_id": router_id}
+
+    # OSPF网络配置列表
+    ospf_network_list = []
+
+    # 提取OSPF进程下的每一个Area
+    for area in router_ospf_process.area:
+        # 提取OSPF的区域ID
+        ospf_area_id = area.area_id
+        # 找到此OSPF区域下的每一个需要被宣告的网络
+        for ospf_network in area.ospf_network:
+            # 提取OSPF网络
+            ospf_network_net = ospf_network.network
+            # 提取OSPF反掩码
+            ospf_network_wildmask = ospf_network.wildmask
+            # 把区域ID, OSPF网络, OSPF反掩码放入OSPF网络配置列表"ospf_network_list"
+            ospf_network_list.append({"area": ospf_area_id,
+                                      "network": ospf_network_net,
+                                      "wildmask": ospf_network_wildmask
+                                      })
+    # 把网络配置写入OSPF配置的字典"ospf_dic"
+    ospf_dict["ospf_network_list"] = ospf_network_list
+
+    # 路由器OSPF配置模板内容如下:
+    # router ospf {{ ospf_process_id }}
+    #     router-id {{ router_id }}
+    #     {% for n in ospf_network_list %}
+    #       network {{ n.network }} {{ n.wildmask }} area {{ n.area }}
+    #     {% endfor %}
+    pprint.pprint(ospf_dict)
+    # 期望输出:
+    # {'ospf_network_list': [{'area': 0,
+    #                         'network': '10.1.1.0',
+    #                         'wildmask': '0.0.0.255'},
+    #                        {'area': 0,
+    #                         'network': '2.2.2.2',
+    #                         'wildmask': '0.0.0.0'}],
+    #  'ospf_process_id': 1,
+    #  'router_id': '2.2.2.2'}
+    # 替换OSPF配置模板产生配置(多行字符串)
+    ospf_config_result = ospf_config_template.render(**ospf_dict)
+    # 把多行字符串, 通过".split('\n')"切分为一行一行的命令, 放入最终配置命令列表"router_final_config_list"
+    router_final_config_list.extend(ospf_config_result.split('\n'))
+
+    # 不使用协程, 可以使用下面的代码
+    # netmiko_config_cred(router_ip, login_username, login_password, router_final_config_list, verbose=True)
+
+    # 产生协程任务
+    task = loop.create_task(async_netmiko(task_no, router_ip, login_username, login_password, router_final_config_list))
+    # 把产生的协程任务放入任务列表
+    tasks.append(task)
+    # 任务号加1
+    task_no += 1
+
+# 执行协程任务列表
+loop.run_until_complete(asyncio.wait(tasks))
+检查路由器配置
+登录设备检查接口与 OSPF 邻居状态 (以 C8Kv1 为例):
+
+C8Kv1# show ip interface brief
+Interface              IP-Address      OK? Method Status                Protocol
+GigabitEthernet1       196.21.5.211    YES NVRAM  up                    up
+GigabitEthernet2       172.16.1.1      YES manual up                    up
+Loopback0              1.1.1.1         YES manual up                    up
+
+C8Kv1# show ip ospf neighbor
+Neighbor ID     Pri   State           Dead Time   Address         Interface
+2.2.2.2           1   FULL/BDR        00:00:35    172.16.1.2      GigabitEthernet2
+
+C8Kv1# show ip route ospf
+      2.0.0.0/32 is subnetted, 1 subnets
+O        2.2.2.2 [110/2] via 172.16.1.2, 00:01:23, GigabitEthernet2
+代码目录结构:
+
+day7/code/
+├── tools/
+│   └── ssh_client_netmiko.py     # Netmiko SSH 配置工具函数 (已提供)
+├── templates/
+│   ├── cisco_ios_interface.template # 接口配置 Jinja2 模板
+│   └── cisco_ios_ospf.template      # OSPF 配置 Jinja2 模板
+├── day7_1_create_db.py           # 任务二: 创建 PostgreSQL 数据库表
+├── day7_2_insert_data.py         # 任务三: 写入路由器接口和 OSPF 数据
+├── day7_3_config_device.py       # 任务四: 读取数据, 协程 Netmiko 批量配置设备
+├── docker-compose.yaml           # 任务一: PostgreSQL 容器编排
+└── init-user-db.sh               # 任务一: 数据库初始化脚本

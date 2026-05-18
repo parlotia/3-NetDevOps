@@ -1,0 +1,201 @@
+1.为保存接口数据, 创建Sqlite(ORM)数据库表
+具体代码 (day6_1_create_db.py):
+
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, String, Integer, DateTime, BigInteger
+import datetime
+import os
+
+db_file_name = f'{os.path.dirname(os.path.realpath(__file__))}{os.path.sep}sqlalchemy_syslog_sqlite3.db'
+
+engine = create_engine(f'sqlite:///{db_file_name}?check_same_thread=False')
+
+Base = declarative_base()
+
+
+# 记录路由器接口信息数据库表
+class InternfaceMonitor(Base):
+    __tablename__ = 'interface_monitor'
+
+    id              = Column(Integer, primary_key=True)
+    device_ip       = Column(String(64), nullable=False)         # 设备IP地址
+    interface_name  = Column(String(64), nullable=False)         # 接口名称
+    in_bytes        = Column(BigInteger, nullable=False)         # 入向字节数
+    out_bytes       = Column(BigInteger, nullable=False)         # 出向字节数
+    record_datetime = Column(DateTime(timezone='Asia/Chongqing'), default=datetime.datetime.now)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(路由器IP: {self.device_ip} " \
+               f"| 时间: {self.record_datetime} " \
+               f"| 接口名称: {self.interface_name} " \
+               f"| 入向字节数: {self.in_bytes} " \
+               f"| 出向字节数: {self.out_bytes})"
+
+
+if __name__ == '__main__':
+    if os.path.exists(db_file_name):
+        os.remove(db_file_name)
+    Base.metadata.create_all(engine, checkfirst=True)
+2.使用SNMP采集接口数据(支持多个设备, 支持多个接口)[本次实验至少采集两个设备], 并通过Crond调度代码写入Sqlite数据库
+关键 IF-MIB OID (GETBULK 获取所有接口):
+
+接口名称 (ifDescr):        1.3.6.1.2.1.2.2.1.2
+入向字节数 (ifInOctets):   1.3.6.1.2.1.2.2.1.10
+出向字节数 (ifOutOctets):  1.3.6.1.2.1.2.2.1.16
+写库脚本期望输出 (day6_2_write_sqlite.py):
+
+$ python3 day6_2_write_sqlite.py
+[+] 设备IP GigabitEthernet1               IN=  3094684762  OUT=   143150469
+[+] 设备IP GigabitEthernet2               IN=    19457420  OUT=    12672982
+[+] 设备IP GigabitEthernet3               IN=  2495193047  OUT=     1225680
+[*] 共写入 6 条记录
+【Crond 调度配置】(vim /etc/crontab):
+
+# 每分钟执行一次 SNMP 采集写入 SQLite
+* * * * * root /你的项目/.venv/bin/python3.11 /你的项目/day6/code/day6_2_write_sqlite.py >> /tmp/day6_sqlite.log 2>&1
+配置完成后重启: systemctl restart crond  |  查看日志: tail -f /tmp/day6_sqlite.log
+
+
+3.提取最近十分钟的设备接口速率信息, 并使用Bokeh线形图进行呈现
+关注点1: 使用Numpy计算速率
+
+关注点2: 数据清洗
+
+完整代码 (day6_3_show_sqlite.py):
+
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import numpy as np
+from datetime import datetime, timedelta
+from sqlalchemy.orm import sessionmaker
+from code.day6_1_create_db import InternfaceMonitor, engine
+from code.tools.day6_bokeh_line import bokeh_line
+
+Session = sessionmaker(bind=engine)
+
+
+def show_speed_from_db(minutes=10):
+    """从 SQLite 读取最近 N 分钟数据, 用 Numpy 向量化计算速率, Bokeh 出图。"""
+    session = Session()
+    cutoff = datetime.now() - timedelta(minutes=minutes)
+
+    combos = (session.query(InternfaceMonitor.device_ip, InternfaceMonitor.interface_name)
+              .distinct().all())
+
+    in_speed_lines  = []
+    out_speed_lines = []
+
+    for device_ip, interface_name in combos:
+        records = (session.query(InternfaceMonitor)
+                   .filter(InternfaceMonitor.device_ip == device_ip,
+                           InternfaceMonitor.interface_name == interface_name,
+                           InternfaceMonitor.record_datetime >= cutoff)
+                   .order_by(InternfaceMonitor.record_datetime)
+                   .all())
+
+        if len(records) < 2:
+            print(f"[!] {device_ip} {interface_name}: 数据点不足 2 个, 跳过")
+            continue
+
+        # ---- 关注点1: 转换为 Numpy 数组, 用 np.diff 计算增量 ----
+        in_arr   = np.array([r.in_bytes for r in records],  dtype=np.int64)
+        out_arr  = np.array([r.out_bytes for r in records], dtype=np.int64)
+        # datetime64[s]: 以秒为单位存储时间, diff 后直接得到秒数的 int64
+        time_arr = np.array([r.record_datetime for r in records], dtype='datetime64[s]')
+
+        # np.diff([10, 20, 35]) → array([10, 15])
+        diff_in   = np.diff(in_arr)
+        diff_out  = np.diff(out_arr)
+        # np.diff 对 datetime64[s] 返回 timedelta64[s], astype(int64) 得到总秒数
+        # 注意: 不能用 .seconds 属性! 它只返回 0~86399 的分量, 跨分钟边界时会算错
+        diff_secs = np.diff(time_arr).astype(np.int64)
+
+        # ---- 关注点2: 全向量化计算 kbps + 数据清洗 (无 Python for 循环) ----
+        # 公式: (字节增量 × 8) / (1000 × 秒数) = kbps
+        # valid 布尔掩码: diff_secs > 0 防除零; diff > 0 过滤计数器翻转负值
+        valid = (diff_secs > 0) & (diff_in > 0) & (diff_out > 0)
+
+        in_kbps  = np.round((diff_in[valid]  * 8) / (1000 * diff_secs[valid]), 2)
+        out_kbps = np.round((diff_out[valid] * 8) / (1000 * diff_secs[valid]), 2)
+
+        # diff 结果比原数组少一个, +1 对齐; 再用 valid 掩码筛选时间点
+        clean_times = np.array([r.record_datetime for r in records[1:]])[valid].tolist()
+        clean_in    = in_kbps.tolist()
+        clean_out   = out_kbps.tolist()
+
+        if not clean_times:
+            print(f"[!] {device_ip} {interface_name}: 清洗后无有效数据点")
+            continue
+
+        label = f"{device_ip}:{interface_name}"
+        in_speed_lines.append([clean_times, clean_in,  f"RX:{label}"])
+        out_speed_lines.append([clean_times, clean_out, f"TX:{label}"])
+        print(f"[*] {label}: {len(clean_times)} 个有效速率点")
+
+    session.close()
+
+    if in_speed_lines:
+        bokeh_line(in_speed_lines,  title='接口入向速率 (RX)')
+    if out_speed_lines:
+        bokeh_line(out_speed_lines, title='接口出向速率 (TX)')
+
+
+if __name__ == '__main__':
+    show_speed_from_db(minutes=10)
+4.Bokeh最终出图效果
+工具函数测试输出 (bokeh_line 单独运行):
+
+
+接口入向速率 (RX):
+
+
+接口出向速率 (TX):
+
+
+5.使用SNMP采集接口数据(支持多个设备, 支持多个接口)[本次实验至少采集两个设备], 并通过Crond调度代码写入InfluxDB数据库
+使用第五天作业的方案拉起InfluxDB, Grafana
+
+【Crond 调度配置】(vim /etc/crontab):
+
+# 每分钟执行一次 SNMP 采集写入 InfluxDB
+* * * * * root /你的项目/.venv/bin/python3.11 /你的项目/day6/code/day6_4_write_influxdb.py >> /tmp/day6_influx.log 2>&1
+配置完成后重启: systemctl restart crond  |  查看日志: tail -f /tmp/day6_influx.log
+
+
+6.配置Grafana Dashboard
+出向速率Query
+
+SELECT non_negative_derivative(mean("out_bytes"), 1s) * 8 FROM "interface_monitor" WHERE $timeFilter GROUP BY time($__interval), device_ip, interface_name
+
+入向速率Query
+
+SELECT non_negative_derivative(mean("in_bytes"), 1s) * 8 FROM "interface_monitor" WHERE $timeFilter GROUP BY time($__interval), device_ip, interface_name
+
+Alias By
+
+[[tag_device_ip]]--[[tag_interface_name]]
+
+Unit
+
+bits/sec(SI)
+
+最终Grafana呈现效果
+
+代码目录结构:
+
+day6/code/
+├── tools/
+│   ├── day6_snmp_get.py          # SNMP GET 单 OID 采集 (已提供)
+│   ├── day6_snmp_getbulk.py      # SNMP GETBULK 批量采集 (已提供)
+│   ├── day6_snmp_get_all.py      # 汇总采集: 接口名称/速率/状态/字节数 (已提供)
+│   └── day6_bokeh_line.py        # Bokeh 折线图工具函数 (已提供)
+├── day6_1_create_db.py           # 任务一: 创建 SQLite 数据库表
+├── day6_2_write_sqlite.py        # 任务二: SNMP 采集写入 SQLite【Crond 调度】
+├── day6_3_show_sqlite.py         # 任务三: 读取 SQLite → Numpy 计算 → Bokeh 出图
+├── day6_4_write_influxdb.py      # 任务五: SNMP 采集写入 InfluxDB【Crond 调度】
+├── docker-compose.yaml           # InfluxDB + Grafana 容器编排
+├── grafana.md                    # Grafana Dashboard 配置说明
+├── Dashboard_Speed.json          # Grafana Dashboard 导入文件
+└── outputs/                      # Bokeh 生成的交互式 HTML 图表

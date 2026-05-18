@@ -1,0 +1,558 @@
+NetDevOps 经典自动化协议 第九天 [获取路由器配置, 独立备份配置, 比较差异并邮件通知]
+本次作业主要任务: 在 day9 目录内完成配置备份系统的独立实现, 包括数据库建表、设备初始化、配置采集、配置 diff 比对、变化后邮件告警与 cron 后台调度。
+
+本次作业围绕“定时备份路由器配置, 通过 diff 找出配置变化, 并把差异结果通过邮件发送出来”展开。你需要把数据库、采集、比对、告警和调度这些环节完整串起来, 最终形成一个可以周期运行的配置巡检工具。
+
+环境准备:
+
+pip install sqlalchemy netmiko
+
+# 如果需要自定义数据库位置, 可以覆盖默认 SQLite 文件
+export DATABASE_URL='sqlite:////python_homework_protocol/new_homework/day9/code/day9_config_backup.db?check_same_thread=False'
+
+# 如果需要真实发送邮件, 再配置 SMTP 环境变量
+export SMTPSERVER='smtp.example.com'
+export SMTPUSER='your_mail@example.com'
+export SMTPPASS='your_smtp_password'
+export SMTPFROM='your_mail@example.com'
+代码目录结构:
+
+day9/code/
+├── __init__.py
+├── day9_1_model.py                 # 数据库模型
+├── day9_2_init_db.py               # 第一步: 创建数据表
+├── day9_3_seed_devices.py          # 第二步: 初始化测试设备清单
+├── day9_4_config_diff_backup.py    # 第三步: 主程序采集、比较、告警、备份入库
+└── tools/
+    ├── __init__.py
+    ├── diff_config.py              # 配置差异比较工具
+    ├── smtp_send_mail_attachment.py# 支持附件的邮件发送工具
+    └── ssh_client_netmiko.py       # Netmiko show 命令工具
+
+建议执行顺序:
+1. day9_2_init_db.py
+2. day9_3_seed_devices.py
+3. day9_4_config_diff_backup.py
+编写 Day 9 自己的数据库模型
+本题要求在 Day 9 内部定义独立的数据表。建议保留两张表: Device 保存设备清单, ConfigBackup 保存每次备份到的配置和 MD5 值。默认使用 SQLite 文件 day9_config_backup.db, 这样更容易独立运行; 如果你以后想切到 PostgreSQL, 可以通过环境变量 DATABASE_URL 覆盖。
+
+day9_1_model.py:
+
+#!/usr/bin/env python3
+# -*- coding=utf-8 -*-
+"""Day 9 - 配置备份数据库模型"""
+
+import os
+import datetime
+
+from sqlalchemy import Column
+from sqlalchemy import DateTime
+from sqlalchemy import ForeignKey
+from sqlalchemy import String
+from sqlalchemy import Text
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import relationship
+from sqlalchemy.orm import sessionmaker
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_FILE = os.path.join(BASE_DIR, 'day9_config_backup.db')
+DATABASE_URL = os.getenv('DATABASE_URL', f'sqlite:///{DB_FILE}?check_same_thread=False')
+
+engine = create_engine(DATABASE_URL)
+Session = sessionmaker(bind=engine)
+Base = declarative_base()
+
+
+class Device(Base):
+    """保存 Day 9 使用的设备清单。"""
+
+    __tablename__ = 'device'
+
+    id = Column(String(64), primary_key=True)
+    device_name = Column(String(64), nullable=False, index=True)
+    ip = Column(String(64), nullable=False, unique=True, index=True)
+    username = Column(String(64), nullable=False)
+    password = Column(String(64), nullable=False)
+    enable_password = Column(String(64), nullable=False)
+    transport = Column(String(16), nullable=False, default='ssh')
+    config_backups = relationship('ConfigBackup', back_populates='device', passive_deletes=True)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}(device_name={self.device_name}, ip={self.ip})'
+
+
+class ConfigBackup(Base):
+    """保存每次采集到的设备配置和 MD5 值。"""
+
+    __tablename__ = 'config_backup'
+
+    id = Column(String(64), primary_key=True)
+    device_id = Column(String(64), ForeignKey('device.id', ondelete='CASCADE'), nullable=False, index=True)
+    config_text = Column(Text, nullable=False)
+    config_md5 = Column(String(64), nullable=False, index=True)
+    backup_time = Column(DateTime, default=datetime.datetime.now, nullable=False, index=True)
+    device = relationship('Device', back_populates='config_backups', passive_deletes=True)
+
+    def __repr__(self):
+        return (
+            f'{self.__class__.__name__}(device_ip={self.device.ip}, '
+            f'backup_time={self.backup_time}, config_md5={self.config_md5})'
+        )
+day9_2_init_db.py:
+
+#!/usr/bin/env python3
+# -*- coding=utf-8 -*-
+"""Day 9 - 初始化配置备份数据库"""
+
+import os
+import sys
+
+# crond 调度时当前工作目录不固定, 需要把 day9 代码目录加入搜索路径
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, CURRENT_DIR)
+
+from day9_1_model import Base  # noqa: E402
+from day9_1_model import engine  # noqa: E402
+
+
+def init_database():
+    """创建 Day 9 使用的全部数据表。"""
+    Base.metadata.create_all(engine, checkfirst=True)
+    print('[+] Day 9 数据库表已经创建完成')
+
+
+if __name__ == '__main__':
+    init_database()
+期望输出:
+
+[+] Day 9 数据库表已经创建完成
+初始化 Day 9 的测试设备清单
+为了让 Day 9 不再依赖旧的 router 表, 这里单独准备一个设备清单初始化脚本。作业中不要写死真实设备信息, 请替换成你自己的设备地址、用户名和密码。
+
+day9_3_seed_devices.py:
+
+#!/usr/bin/env python3
+# -*- coding=utf-8 -*-
+"""Day 9 - 初始化测试设备清单"""
+
+import os
+import sys
+import uuid
+
+# crond 调度时当前工作目录不固定, 需要把 day9 代码目录加入搜索路径
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, CURRENT_DIR)
+
+from day9_1_model import Device  # noqa: E402
+from day9_1_model import Session  # noqa: E402
+
+
+TEST_DEVICES = [
+    {
+        'device_name': 'R1',
+        'ip': '<设备IP1>',
+        'username': '<用户名>',
+        'password': '<密码>',
+        'enable_password': '<特权密码>',
+        'transport': 'ssh',
+    },
+    {
+        'device_name': 'R2',
+        'ip': '<设备IP2>',
+        'username': '<用户名>',
+        'password': '<密码>',
+        'enable_password': '<特权密码>',
+        'transport': 'ssh',
+    },
+]
+
+
+def seed_devices():
+    """把 Day 9 验证所需的测试设备写入数据库。"""
+    session = Session()
+
+    try:
+        for device_info in TEST_DEVICES:
+            device_obj = session.query(Device).filter_by(ip=device_info['ip']).first()
+
+            if device_obj is None:
+                device_obj = Device(
+                    id=uuid.uuid4().hex,
+                    device_name=device_info['device_name'],
+                    ip=device_info['ip'],
+                    username=device_info['username'],
+                    password=device_info['password'],
+                    enable_password=device_info['enable_password'],
+                    transport=device_info['transport'],
+                )
+                session.add(device_obj)
+                print(f"[+] 新增设备: {device_info['device_name']} {device_info['ip']}")
+            else:
+                device_obj.device_name = device_info['device_name']
+                device_obj.username = device_info['username']
+                device_obj.password = device_info['password']
+                device_obj.enable_password = device_info['enable_password']
+                device_obj.transport = device_info['transport']
+                print(f"[*] 更新设备: {device_info['device_name']} {device_info['ip']}")
+
+        session.commit()
+        print(f'[+] 共处理 {len(TEST_DEVICES)} 台测试设备')
+    finally:
+        session.close()
+
+
+if __name__ == '__main__':
+    seed_devices()
+期望输出:
+
+[+] 新增设备: R1 <设备IP1>
+[+] 新增设备: R2 <设备IP2>
+[+] 共处理 2 台测试设备
+编写配置差异比较工具与邮件发送工具
+配置发生变化时, 邮件正文需要直接展示 diff 结果。为了便于后续复用, 先把文本差异比较和邮件发送分别封装在 tools 目录。
+
+tools/diff_config.py:
+
+#!/usr/bin/env python3
+# -*- coding=utf-8 -*-
+"""Day 9 - 配置差异比较工具"""
+
+import os
+from difflib import Differ
+
+
+def diff_file(file1, file2):
+    """比较两个文本文件的逐行差异。"""
+    with open(file1, 'r', encoding='utf-8') as txt1_file:
+        txt1 = txt1_file.readlines()
+
+    with open(file2, 'r', encoding='utf-8') as txt2_file:
+        txt2 = txt2_file.readlines()
+
+    result = Differ().compare(txt1, txt2)
+    return os.linesep.join(list(result))
+
+
+def diff_txt(txt1, txt2):
+    """比较两段文本的逐行差异。"""
+    txt1_list = txt1.splitlines()
+    txt2_list = txt2.splitlines()
+    result = Differ().compare(txt1_list, txt2_list)
+    return os.linesep.join(list(result))
+
+
+if __name__ == '__main__':
+    sample_old = 'hostname C8Kv1\ninterface Loopback0\n ip address 1.1.1.1 255.255.255.255'
+    sample_new = 'hostname C8Kv1\ninterface Loopback0\n ip address 1.1.1.2 255.255.255.255'
+    print(diff_txt(sample_old, sample_new))
+tools/smtp_send_mail_attachment.py:
+
+#!/usr/bin/env python3
+# -*- coding=utf-8 -*-
+"""Day 9 - 支持附件的邮件发送工具"""
+
+import os
+import smtplib
+import email.utils
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+
+def qyt_smtp_attachment(mailserver, username, password, from_mail, to_mail, subj, main_body, files=None):
+    """使用 SSL SMTP 发送带正文和附件的邮件。"""
+    tos = [mail.strip() for mail in to_mail.split(';') if mail.strip()]
+    date = email.utils.formatdate()
+    msg = MIMEMultipart()
+    msg['Subject'] = subj
+    msg['From'] = from_mail
+    msg['To'] = to_mail
+    msg['Date'] = date
+
+    part = MIMEText(main_body, _subtype='plain', _charset='utf-8')
+    msg.attach(part)
+
+    if files:
+        for file in files:
+            with open(file, 'rb') as file_obj:
+                part = MIMEApplication(file_obj.read())
+
+            part.add_header('Content-Disposition', 'attachment', filename=os.path.basename(file))
+            msg.attach(part)
+
+    server = smtplib.SMTP_SSL(mailserver, 465)
+    server.login(username, password)
+    failed = server.sendmail(from_mail, tos, msg.as_string())
+    server.quit()
+
+    if failed:
+        print(f'[-] Falied recipients: {failed}')
+    else:
+        print('[+] 邮件已经成功发出！')
+
+
+if __name__ == '__main__':
+    print('请在主程序中调用 qyt_smtp_attachment() 发送邮件。')
+编写 Day 9 自己的 Netmiko 采集工具
+这里在自己的 tools 目录中独立封装一个 show run 采集函数, 供主程序直接调用。
+
+tools/ssh_client_netmiko.py:
+
+#!/usr/bin/env python3
+# -*- coding=utf-8 -*-
+"""Day 9 - Netmiko 采集工具"""
+
+from netmiko import Netmiko
+from netmiko.exceptions import NetmikoAuthenticationException
+from netmiko.exceptions import NetmikoTimeoutException
+
+
+def netmiko_show_cred(host, username, password, cmd, enable='Cisc0123', ssh=True):
+    """通过 Netmiko 连接设备并执行 show 命令。"""
+    device_info = {
+        'host': host,
+        'username': username,
+        'password': password,
+        'device_type': 'cisco_ios' if ssh else 'cisco_ios_telnet',
+        'secret': enable,
+    }
+
+    try:
+        net_connect = Netmiko(**device_info)
+        net_connect.enable()
+        result = net_connect.send_command(cmd, read_timeout=120)
+        net_connect.disconnect()
+        return result, host
+    except (NetmikoTimeoutException, NetmikoAuthenticationException, OSError) as error:
+        print(f'[-] connection error ip: {host} error: {error}')
+        return None
+
+
+if __name__ == '__main__':
+    print('请在 Day 9 主程序中调用 netmiko_show_cred()。')
+并发采集配置, 比较 MD5, 检测变化后发送邮件, 无论是否变化都入库
+主程序需要封装成“执行一次后退出”的结构, 这样才能直接被 cron 周期调度。程序逻辑是: 读取设备清单, 协程并发执行 show run, 提取 hostname 及其以下内容, 计算 MD5, 查找上一次备份, 如果配置发生变化就发送邮件, 最后无论是否变化都把本次配置写入数据库。
+
+注意: 为了保留作业训练价值, 主流程调度部分不要全部直接照抄, 下面会用 ★ 标出需要你自己补齐的关键逻辑。
+
+day9_4_config_diff_backup.py:
+
+#!/usr/bin/env python3
+# -*- coding=utf-8 -*-
+"""Day 9 - 获取路由器配置、备份配置、比较异常邮件通知"""
+
+import asyncio
+import hashlib
+import os
+import re
+import sys
+import uuid
+
+# crond 调度时当前工作目录不固定, 需要把当前目录加入搜索路径
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, CURRENT_DIR)
+
+from day9_1_model import ConfigBackup  # noqa: E402
+from day9_1_model import Device  # noqa: E402
+from day9_1_model import Session  # noqa: E402
+from tools.diff_config import diff_txt  # noqa: E402
+from tools.smtp_send_mail_attachment import qyt_smtp_attachment  # noqa: E402
+from tools.ssh_client_netmiko import netmiko_show_cred  # noqa: E402
+
+
+SHOW_COMMAND = 'show run'
+
+
+def normalize_config(config_text):
+    """提取 hostname 行及其以下的配置内容。"""
+    match = re.search(r'(?:^|\n)(hostname\s+\S+\n.*)$', config_text, re.S)
+
+    if match:
+        return match.group(1).strip()
+
+    return config_text.strip()
+
+
+def calculate_md5(config_text):
+    """计算配置文本的 MD5 值。"""
+    md5_obj = hashlib.md5()
+    md5_obj.update(config_text.encode('utf-8'))
+    return md5_obj.hexdigest()
+
+
+def load_mail_config():
+    """从环境变量中加载 SMTP 配置。"""
+    from_mail = os.getenv('SMTPFROM', '')
+    return {
+        'mailserver': os.getenv('SMTPSERVER', ''),
+        'username': os.getenv('SMTPUSER', ''),
+        'password': os.getenv('SMTPPASS', ''),
+        'from_mail': from_mail,
+        'to_mail': 'collinsctk@qytang.com',
+    }
+
+
+def mail_config_ready(mail_config):
+    """检查 SMTP 配置是否完整。"""
+    return all(mail_config.values())
+
+
+async def async_netmiko_show(task_id, device_obj, cmd):
+    """在线程池中异步执行 Netmiko show 命令。"""
+    loop = asyncio.get_running_loop()
+    print(f'[*] 任务 {task_id} 开始采集 {device_obj.device_name} {device_obj.ip}')
+
+    result = await loop.run_in_executor(
+        None,
+        netmiko_show_cred,
+        device_obj.ip,
+        device_obj.username,
+        device_obj.password,
+        cmd,
+        device_obj.enable_password,
+        device_obj.transport == 'ssh',
+    )
+
+    print(f'[*] 任务 {task_id} 完成采集 {device_obj.device_name} {device_obj.ip}')
+    return device_obj, result
+
+
+async def collect_all_configs(device_list, cmd):
+    """并发采集所有设备的配置。"""
+    tasks = []
+
+    for task_id, device_obj in enumerate(device_list, start=1):
+        tasks.append(asyncio.create_task(async_netmiko_show(task_id, device_obj, cmd)))
+
+    return await asyncio.gather(*tasks)
+
+
+def send_diff_alert(device_obj, last_backup, current_config, mail_config):
+    """当配置发生变化时发送差异邮件。"""
+    if not mail_config_ready(mail_config):
+        print(f'[~] {device_obj.ip} 配置已变化, 但未配置 SMTP 环境变量, 跳过发信')
+        return
+
+    diff_result = diff_txt(last_backup.config_text, current_config)
+    subject = f'设备 {device_obj.device_name}({device_obj.ip}) 配置发生变化'
+
+    qyt_smtp_attachment(
+        mail_config['mailserver'],
+        mail_config['username'],
+        mail_config['password'],
+        mail_config['from_mail'],
+        mail_config['to_mail'],
+        subject,
+        diff_result,
+    )
+
+
+def save_backup(session, device_obj, config_text, config_md5):
+    """把本次配置备份写入数据库。"""
+    backup_obj = ConfigBackup(
+        id=uuid.uuid4().hex,
+        device_id=device_obj.id,
+        config_text=config_text,
+        config_md5=config_md5,
+    )
+    session.add(backup_obj)
+    session.commit()
+
+
+def process_backup_results(session, collected_results, mail_config):
+    """处理采集结果, 执行差异比较、邮件告警和入库。"""
+    changed_count = 0
+    saved_count = 0
+
+    for device_obj, raw_result in collected_results:
+        if raw_result is None:
+            print(f'[-] {device_obj.ip} 采集失败, 本次跳过入库')
+            continue
+
+        device_config_raw, host = raw_result
+        device_config = normalize_config(device_config_raw)
+        md5_value = calculate_md5(device_config)
+
+        last_backup = (
+            session.query(ConfigBackup)
+            .filter_by(device_id=device_obj.id)
+            .order_by(ConfigBackup.backup_time.desc(), ConfigBackup.id.desc())
+            .first()
+        )
+
+        if last_backup is None:
+            print(f'[+] {host} 首次备份配置')
+        elif last_backup.config_md5 != md5_value:
+            changed_count += 1
+            print(f'[!] {host} 配置发生变化, 准备发送告警')
+            send_diff_alert(device_obj, last_backup, device_config, mail_config)
+        else:
+            print(f'[*] {host} 配置未发生变化')
+
+        save_backup(session, device_obj, device_config, md5_value)
+        saved_count += 1
+
+    return changed_count, saved_count
+
+
+def run_backup_workflow():
+    """执行 Day 9 配置备份与差异检测工作流。"""
+    session = Session()
+    mail_config = load_mail_config()
+
+    try:
+        # ★★★★★★ 请在这里查询设备清单, 按设备名称排序 ★★★★★★
+
+        # ★★★★★★ 请在这里判断设备清单是否为空, 为空则提示并退出 ★★★★★★
+
+        # ★★★★★★ 请在这里补齐主流程: 打印设备数量、并发采集配置、处理比对结果、输出汇总信息 ★★★★★★
+    finally:
+        session.close()
+
+
+if __name__ == '__main__':
+    run_backup_workflow()
+首次运行期望输出:
+
+[*] 本次共需要采集 2 台设备
+[*] 任务 1 开始采集 R1 <设备IP1>
+[*] 任务 2 开始采集 R2 <设备IP2>
+[*] 任务 1 完成采集 R1 <设备IP1>
+[*] 任务 2 完成采集 R2 <设备IP2>
+[+] <设备IP1> 首次备份配置
+[+] <设备IP2> 首次备份配置
+[+] 本次完成 2 台设备备份, 配置变化 0 台
+配置变化时的参考输出:
+
+[!] <设备IP1> 配置发生变化, 准备发送告警
+[+] 邮件已经成功发出！
+把 Day 9 主程序放入 Rocky Linux 9 的 cron 后台调度
+由于这个脚本每次执行完就退出, 因此非常适合通过 cron 做周期调度。建议使用绝对路径调用 Python 和脚本, 同时把日志重定向到临时文件, 便于排错。
+
+编辑 /etc/crontab 参考如下:
+
+SHELL=/bin/bash
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+MAILTO=root
+
+# 每分钟执行一次 Day 9 配置备份
+* * * * * root /usr/bin/python3 /python_homework_protocol/new_homework/day9/code/day9_4_config_diff_backup.py >> /tmp/day9_config_diff.log 2>&1
+重启与查看日志:
+
+systemctl restart crond
+tail -f /tmp/day9_config_diff.log
+cron 日志期望输出:
+
+[*] 本次共需要采集 2 台设备
+[*] 任务 1 开始采集 R1 <设备IP1>
+[*] 任务 2 开始采集 R2 <设备IP2>
+[*] <设备IP1> 配置未发生变化
+[*] <设备IP2> 配置未发生变化
+[+] 本次完成 2 台设备备份, 配置变化 0 台
+邮件效果参考:
+
+如果配置发生变化, 邮件正文中应直接展示 diff 结果。下图保留为参考效果。
+
+
